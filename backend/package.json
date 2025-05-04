@@ -11,16 +11,18 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "drizzle-orm": "^0.38.4",
-    "postgres": "^3.4.5",
+    "@aws-sdk/client-s3": "^3.802.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.38.4",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "multer-s3": "^3.0.1",
+    "postgres": "^3.4.5",
     "uuid": "^11.0.5",
     "winston": "^3.17.0"
   },
@@ -28,4 +30,4 @@
     "drizzle-kit": "^0.30.2",
     "nodemon": "^3.1.9"
   }
-} 
+}
