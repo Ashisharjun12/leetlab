@@ -6,7 +6,8 @@ import helmet from "helmet";
 import logger from "./utils/logger.js";
 import morgan from "morgan";
 import accessLogStream from "./utils/morgan.js";
-
+import authRoutes from "./routes/user.route.js";
+import problemRoute from "./routes/problem.route.js"
 const app = express();
 const PORT = _config.PORT;
 
@@ -20,6 +21,10 @@ app.use(morgan('combined', { stream: accessLogStream }));
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
+
+//routes
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/problem",problemRoute)
 
 // Error handler middleware placeholder
 app.use((err, req, res, next) => {
