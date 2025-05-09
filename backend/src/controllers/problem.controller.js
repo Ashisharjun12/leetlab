@@ -3,6 +3,9 @@
 
 
 export const createProblem = async (req, res) => {
+    res.status(200).json({
+        message:"hello form admin"
+    })
 
 };
 
