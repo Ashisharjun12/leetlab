@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import logger from "./logger.js";
+import logger from "../utils/logger.js";
 import { _config } from "../config/config.js";
 
 
