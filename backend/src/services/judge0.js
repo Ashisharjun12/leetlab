@@ -1,4 +1,3 @@
-
 import axios from "axios"
 import { _config } from "../config/config.js"
 
@@ -9,7 +8,7 @@ export const getJudge0LanguageId = (langguage)=>{
         'JAVASCRIPT':63
     }
 
-    return languageMap[langguage].toUpperCase()
+    return languageMap[langguage.toUpperCase()]
 
 }
 

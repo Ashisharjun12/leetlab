@@ -18,16 +18,27 @@ export const createProblem = async (req, res) => {
       difficulty,
       constraints,
       testCases,
+      tags,
+      examples,
       codeSnippets,
       reference_solution,
     } = req.body;
 
-    if (req.user.role !== "ADMIN") {
+    if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only Admins can create problems...",
       });
     }
+
+    // Ensure tags and constraints are arrays
+    const processedTags = Array.isArray(tags) 
+      ? tags 
+      : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(t => t) : []);
+    
+    const processedConstraints = Array.isArray(constraints) 
+      ? constraints 
+      : (typeof constraints === 'string' ? constraints.split(',').map(c => c.trim()).filter(c => c) : []);
 
     try {
       for (const [language, solutionCode] of Object.entries(
@@ -35,8 +46,8 @@ export const createProblem = async (req, res) => {
       )) {
         const languageId = getJudge0LanguageId(language);
 
-        if (!languageId.length == 0) {
-          return res.json({ message: "This Language not supported.." });
+        if (!languageId) {
+          return res.status(400).json({ message: `Language ${language} not supported..` });
         }
 
         //testcases
@@ -55,6 +66,7 @@ export const createProblem = async (req, res) => {
 
         for (let i = 0; i < results.length; i++) {
           const result = results[i];
+          console.log("result........",result)
 
           if (result.status.id !== 3) {
             return res
@@ -69,17 +81,17 @@ export const createProblem = async (req, res) => {
       //save in db
 
       const [newProblems] = await db.insert(problem).values({
-        data: {
-          title,
-          description,
-          difficulty,
-          constraints,
-          testCases,
-          codeSnippets,
-          reference_solution,
-          userId :req.user.id
-        },
-      });
+        title,
+        description,
+        difficulty,
+        constraints: processedConstraints,
+        testCases,
+        tags: processedTags,
+        example: examples,
+        codeSnippets,
+        reference_solution: JSON.stringify(reference_solution),
+        userId: req.user.id
+      }).returning();
 
 
       res.status(201).json({
@@ -87,13 +99,43 @@ export const createProblem = async (req, res) => {
         message:"problem created Successfully",
         problemData:newProblems
       })
-    } catch (error) {}
+    } catch (error) {
+        logger.error("Error during problem creation logic:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error during problem creation.",
+            error: error.message 
+        });
+    }
   } catch (error) {
     logger.info("create problem error:", error);
   }
 };
 
-export const getAllProblem = async (req, res) => {};
+export const getAllProblem = async (req, res) => {
+    try {
+        logger.info("hitting get all problem route.....")
+        
+        const getProblems = await db.select().from(problem)
+
+        if(!getProblems){
+            return res.json({error:"problems not found or getting errors..."})
+        }
+
+        res.status(200).json({
+            success:true,
+            message:"getting all problems data...",
+            data :getProblems
+        })
+        
+    } catch (error) {
+        logger.info("error in getting all problems", error)
+        
+    }
+
+
+
+};
 
 export const getProblemById = async (req, res) => {};
 
