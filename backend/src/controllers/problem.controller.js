@@ -329,6 +329,9 @@ export const deleteProblemById = async (req, res) => {
     }
 };
 
-export const getSolvedProblem = async (req, res) => {};
+export const getSolvedProblem = async (req, res) => {
+  
+};
 
-export const getAttemptedProblem = async (req, res) => {};
+export const getAttemptedProblem = async (req, res) => {
+};

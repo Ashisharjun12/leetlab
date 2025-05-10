@@ -11,24 +11,15 @@ export const getJudge0LanguageId = (langguage)=>{
     return languageMap[langguage.toUpperCase()]
 
 }
-
-
-
 export const submitBatch = async(submissions)=>{
     const {data } =  await axios.post(`${_config.JUDGE0_URL}/submissions/batch?base64_encoded=false`,{
         submissions
     })
-
     console.log("sub data:",data)
     return data
 }
 
-
-
 const sleep = (ms)=> new Promise((resolve)=>setTimeout(resolve , ms))
-
-
-
 
 export const pollbatchResults =async (tokens)=>{
     while(true){
