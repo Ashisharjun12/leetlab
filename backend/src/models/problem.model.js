@@ -17,6 +17,7 @@ export const problem = pgTable('problem', {
     hints: text('hints'),
     editorial: text('editorial'),
     testCases: jsonb('test_cases').notNull(),
+    submissions: text("submissions").array(),
     codeSnippets: jsonb('code_snippets').notNull(),
     reference_solution: text('reference_solution'),
     createdAt: timestamp('created_at').defaultNow(),
