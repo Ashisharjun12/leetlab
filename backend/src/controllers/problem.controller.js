@@ -7,6 +7,7 @@ import {
   submitBatch,
 } from "../services/judge0.js";
 import { problem } from "../models/problem.model.js";
+import { eq } from "drizzle-orm";
 
 export const createProblem = async (req, res) => {
   try {
@@ -137,7 +138,36 @@ export const getAllProblem = async (req, res) => {
 
 };
 
-export const getProblemById = async (req, res) => {};
+export const getProblemById = async (req, res) => {
+
+    try {
+        logger.info("hitting getproblemsby id.....")
+
+        const {id} = req.params;
+
+        const problemGetById = await db.select().from(problem).where(eq(problem.id , id))
+
+        if(!problemGetById){
+            return res.json({error:"problem not found by Id..."})
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"getting problem by Id successfully....",
+            data:problemGetById
+        })
+
+
+
+        
+    } catch (error) {
+        logger.info("error in getproblem by Id", error)
+        
+    }
+
+
+
+};
 
 export const updateProblemById = async (req, res) => {};
 
