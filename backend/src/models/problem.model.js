@@ -1,14 +1,19 @@
-import { pgTable, uuid, text, timestamp, pgEnum, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp,  jsonb } from 'drizzle-orm/pg-core';
 import { user } from './user.model.js';
 import { relations } from 'drizzle-orm';
+import { Company } from './company.model.js';
+import { problemDifficulty } from './enums.models.js';
 
 
-export const problemDifficulty = pgEnum('problem_difficulty', ['easy', 'medium', 'hard']);
+
+
+
 
 export const problem = pgTable('problem', {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
     title: text('title').notNull(),
+    companyId: uuid('company_id').references(() => Company.id, { onDelete: 'cascade' }).default(null),
     description: text('description').notNull(),
     difficulty: problemDifficulty('difficulty').default('easy').notNull(),
     tags: text('tags').array().notNull(),

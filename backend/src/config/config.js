@@ -2,7 +2,17 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const { PORT, DATABASE_URI ,JWT_SECRET,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET,NODE_ENV,JUDGE0_URL} = process.env;
+const {
+  PORT,
+  DATABASE_URI,
+  JWT_SECRET,
+  AWS_REGION,
+  AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY,
+  AWS_S3_BUCKET,
+  NODE_ENV,
+  JUDGE0_URL,
+} = process.env;
 
 export const _config = {
   PORT: PORT || 3000,
@@ -14,5 +24,5 @@ export const _config = {
   AWS_S3_BUCKET,
   JWT_SECRET,
   NODE_ENV,
-  JUDGE0_URL
-}; 
+  JUDGE0_URL,
+};
