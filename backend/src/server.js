@@ -8,6 +8,9 @@ import morgan from "morgan";
 import accessLogStream from "./utils/morgan.js";
 import authRoutes from "./routes/user.route.js";
 import problemRoute from "./routes/problem.route.js"
+import executeCodeRoute from "./routes/execute-code.route.js"
+import submissionRoute from "./routes/submission.route.js"
+import playlistRoute from "./routes/playlist.route.js"
 const app = express();
 const PORT = _config.PORT;
 
@@ -25,6 +28,9 @@ app.get("/health", (req, res) => {
 //routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/problem",problemRoute)
+app.use("/api/v1/execute-code",executeCodeRoute)
+app.use("/api/v1/submission",submissionRoute)
+app.use("/api/v1/playlist",playlistRoute)
 
 // Error handler middleware placeholder
 app.use((err, req, res, next) => {

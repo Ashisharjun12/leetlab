@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp,  uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./user.model.js";
 import { problem } from "./problem.model.js";
 import { relations } from "drizzle-orm";
@@ -12,7 +12,7 @@ export const problemSolved = pgTable('problem_solved', {
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 },(t)=>[
-    index('problem_solved_user_id_problem_id_idx').on(t.userId,t.problemId)
+    uniqueIndex('problem_solved_user_id_problem_id_unique_idx').on(t.userId, t.problemId)
 ])
 
 //relations

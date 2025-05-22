@@ -3,7 +3,8 @@ import { user } from './user.model.js';
 import { relations } from 'drizzle-orm';
 import { Company } from './company.model.js';
 import { problemDifficulty } from './enums.models.js';
-
+import { submission } from './submission.model.js';
+import { problemInPlaylist } from './problemInPlaylist.model.js';
 
 
 
@@ -15,7 +16,7 @@ export const problem = pgTable('problem', {
     title: text('title').notNull(),
     companyId: uuid('company_id').references(() => Company.id, { onDelete: 'cascade' }).default(null),
     description: text('description').notNull(),
-    difficulty: problemDifficulty('difficulty').default('easy').notNull(),
+    difficulty: problemDifficulty('problem_difficulty').default('easy').notNull(),
     tags: text('tags').array().notNull(),
     example: jsonb('example').notNull(),
     constraints: text('constraints').array().notNull(),
@@ -30,11 +31,12 @@ export const problem = pgTable('problem', {
 });
 
 //relations
-export const problemRelations = relations(problem, ({ one ,many}) => ({
+export const problemRelations = relations(problem, ({ one, many }) => ({
     user: one(user, {
         fields: [problem.userId],
         references: [user.id],
     }),
     submissions: many(submission),
+    playlists: many(problemInPlaylist),
 }));
 

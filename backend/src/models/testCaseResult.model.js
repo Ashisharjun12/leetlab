@@ -1,7 +1,7 @@
 import { pgTable, uuid, text, timestamp, boolean, jsonb, index} from "drizzle-orm/pg-core";
 import { submission } from "./submission.model.js";
-import { status } from "./enums.models.js"; 
-
+import { status } from "./enums.models.js";
+import { relations } from "drizzle-orm";
 
 export const testCaseResult = pgTable('test_case_result', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -22,3 +22,13 @@ export const testCaseResult = pgTable('test_case_result', {
 }, (t) => [
     index('test_case_result_submission_id_idx').on(t.submissionId)
 ]);
+
+//relations
+export const testCaseResultRelations = relations(testCaseResult, ({ one }) => ({
+    submission: one(submission, {
+        fields: [testCaseResult.submissionId],
+        references: [submission.id],
+    }),
+}));
+
+

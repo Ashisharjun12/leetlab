@@ -1,6 +1,6 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const userRoles = pgEnum("user_roles", ["user", "admin"]);
+export const userRole = pgEnum("user_role", ["user", "admin"]);
 
 export const problemDifficulty = pgEnum("problem_difficulty", [
   "easy",
@@ -17,4 +17,4 @@ export const status = pgEnum("status", [
   "runtime_error",
   "compilation_error",
   "internal_error",
-]);
+]); 

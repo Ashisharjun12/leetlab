@@ -1,14 +1,11 @@
-import { pgTable, uuid, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp} from "drizzle-orm/pg-core";
 import { user } from "./user.model.js";
 import { problem } from "./problem.model.js";
-import { status } from "./enums.models.js";
 import { relations } from "drizzle-orm";
 import { testCaseResult } from "./testCaseResult.model.js";
+import { status } from "./enums.models.js";
 
-
-
-
-export const submission = pgTable("submission",{
+export const submission = pgTable("submission", {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
     problemId: uuid('problem_id').references(() => problem.id, { onDelete: 'cascade' }).notNull(),
@@ -20,14 +17,12 @@ export const submission = pgTable("submission",{
     status: status('status').default('pending'),
     memory: text('memory'),
     time: text('time'),
-    testCaseResult: jsonb('test_case_result'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
-})
-
+});
 
 //relations
-export const submissionRelations = relations(submission, ({ one }) => ({
+export const submissionRelations = relations(submission, ({ one, many }) => ({
     user: one(user, {
         fields: [submission.userId],
         references: [user.id],
@@ -36,5 +31,8 @@ export const submissionRelations = relations(submission, ({ one }) => ({
         fields: [submission.problemId],
         references: [problem.id],
     }),
-    testCaseResults: many(testCaseResult),
+    testCaseResults: many(testCaseResult, {
+        fields: [submission.id],
+        references: [testCaseResult.submissionId],
+    }),
 }));

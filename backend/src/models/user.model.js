@@ -1,5 +1,5 @@
-import { pgTable, uuid, text, timestamp, jsonb} from 'drizzle-orm/pg-core';
-import { userRoles } from './enums.models.js';
+import { pgTable, uuid, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { userRole } from './enums.models.js';
 
 export const user = pgTable('users', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -7,7 +7,7 @@ export const user = pgTable('users', {
     email: text('email').notNull().unique(),
     avatar: jsonb('avatar'),
     password: text('password').notNull(),
-    role: userRoles('role').notNull().default('user'), 
+    role: userRole('user_role').notNull().default('user'), 
     problems:text('problems').array(),
     submissions:text('submissions').array(),
     problemsSolved:text('problems_solved').array(),
