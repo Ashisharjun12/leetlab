@@ -48,7 +48,6 @@ export const registerUser = async (req, res) => {
     }).returning();
 
     //sign jwt token
-
    const token = await generateToken(newUser)
 
     res.cookie("jwt", token, {
