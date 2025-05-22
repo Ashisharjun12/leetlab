@@ -401,4 +401,4 @@ export const getAllProblemSolvedByUser = async (req, res) => {
   }
 };
 
-export const getAttemptedProblem = async (req, res) => {};
+

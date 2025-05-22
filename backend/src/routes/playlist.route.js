@@ -12,9 +12,9 @@ import {
 const router = Router();
 
 router.get("/", authenticate, getPlayAllListDetails);
-router.get("/:playlistId", authenticate, getPlayListDetails);
 router.post("/create", authenticate, createPlaylist);
-router.post("/:playlistId:/add-problem", authenticate, addProblemToPlaylist);
+router.get("/:playlistId", authenticate, getPlayListDetails);
+router.post("/:playlistId/add-problem", authenticate, addProblemToPlaylist);
 router.delete("/:playlistId", authenticate, deletePlayList);
 router.delete(
   "/:playlistId/remove-problem",
