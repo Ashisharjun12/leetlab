@@ -1,25 +1,41 @@
 import { Button } from '@/components/ui/button'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { ModeToggle } from '@/components/ui/mode-toggle'
+import { useAuthStore } from '@/store/authStore'
+
 
 
 const Navigation = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
+  const {authUser ,logout} = useAuthStore()
+
+ 
+  useEffect(()=>{
+    setIsLoggedIn(!!authUser);
+    console.log("authusr",authUser)
+  }, [authUser , logout])
+
 
   // Example user data
   const user = {
-    name: 'Ashish',
-    email: 'ashish21@gmail.com',
-    avatar: 'https://api.dicebear.com/9.x/pixel-art/svg',
+    name: authUser?.name,
+    email: authUser?.email,
+    avatar: authUser?.avatar
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    setIsLoggedIn(false);
+  const handleLogout = async() => {
+    try {
+      await logout();
+      navigate('/');
+      
+    } catch (error) {
+      console.error("logged out error:",error );
+      
+    }
     navigate('/');
   };
 
