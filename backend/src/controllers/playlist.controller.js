@@ -105,24 +105,17 @@ export const addProblemToPlaylist = async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing problemIds" });
     }
 
-    console.log(
+    const insertedProblems = await db.insert(problemInPlaylist).values(
       problemIds.map((problemId) => ({
         playlistId,
         problemId,
       }))
-    );
-
-    const [playlistData] = await db.insert(problemInPlaylist).values(
-      problemIds.map((problemId) => ({
-        playlistId,
-        problemId,
-      }))
-    );
+    ).returning();
 
     res.status(200).json({
       success: true,
       message: "Problems added to playlist successfully",
-      problemInPlaylist: playlistData,
+      problemInPlaylist: insertedProblems,
     });
   } catch (error) {
     logger.error(error);
@@ -141,7 +134,7 @@ export const deletePlayList = async (req, res) => {
 
     const [playlistData] = await db
       .delete(playlist)
-      .where(eq(playlist.id, playlistId));
+      .where(eq(playlist.id, playlistId)).returning();
 
     if (!playlistData) {
       return res.status(404).json({ error: "Playlist not found" });
@@ -172,23 +165,19 @@ export const removeProblemFromPlaylist = async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing problemIds" });
     }
 
-    const [deleteProblem] = await db
+    const removedProblems = await db
       .delete(problemInPlaylist)
       .where(
         and(
           eq(problemInPlaylist.playlistId, playlistId),
           inArray(problemInPlaylist.problemId, problemIds)
         )
-      );
-
-    if (!deleteProblem) {
-      return res.status(404).json({ error: "Problem not found in playlist" });
-    }
+      ).returning();
 
     res.status(200).json({
       success: true,
       message: "Problem removed from playlist successfully",
-      problemInPlaylist: deleteProblem,
+      problemInPlaylist: removedProblems,
     });
   } catch (error) {
     logger.error(error);
