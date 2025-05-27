@@ -5,7 +5,7 @@ import logger from "../utils/logger.js";
 
 export const getAllSubmissions = async (req, res) => {
   try {
-    logger.info("Getting all submissions");
+    logger.info("Getting all submission...");
     const userId = req.user.id;
 
     const [submissionData] = await db
@@ -14,7 +14,7 @@ export const getAllSubmissions = async (req, res) => {
       .where(eq(submission.userId, userId));
 
     return res.status(200).json({
-      message: "Submissions fetched successfully",
+      message: "Submissions fetched successfully....",
       data: submissionData,
     });
   } catch (error) {
