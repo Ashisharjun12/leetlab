@@ -14,7 +14,7 @@ export const getAllSubmissions = async (req, res) => {
       .where(eq(submission.userId, userId));
 
     return res.status(200).json({
-      message: "Submissions fetched successfully",
+      message: "Submissions fetched successfully....",
       data: submissionData,
     });
   } catch (error) {
