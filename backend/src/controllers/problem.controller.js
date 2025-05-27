@@ -7,8 +7,9 @@ import {
   submitBatch,
 } from "../services/judge0.js";
 import { problem } from "../models/problem.model.js";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { problemSolved } from "../models/problemSolved.model.js";
+import { Company } from "../models/company.model.js";
 
 export const createProblem = async (req, res) => {
   try {
@@ -24,6 +25,8 @@ export const createProblem = async (req, res) => {
       examples,
       codeSnippets,
       reference_solution,
+      companyId
+      
     } = req.body;
 
     if (req.user.role !== "admin") {
@@ -31,6 +34,25 @@ export const createProblem = async (req, res) => {
         success: false,
         message: "Only Admins can create problems...",
       });
+    }
+
+  
+
+    // Validate companyId if provided
+    if (companyId) {
+      logger.info(`Validating company ID: ${companyId}`);
+      const [company] = await db
+        .select()
+        .from(Company)
+        .where(eq(Company.id, companyId));
+
+      if (!company) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid company ID provided",
+        });
+      }
+      logger.info(`Company found: ${company.name}`);
     }
 
     // Ensure tags and constraints are arrays
@@ -90,9 +112,8 @@ export const createProblem = async (req, res) => {
         }
       }
 
-      //save in db
-
-      const [newProblems] = await db
+      // Create problem with companyId
+      const [newProblem] = await db
         .insert(problem)
         .values({
           title,
@@ -105,13 +126,30 @@ export const createProblem = async (req, res) => {
           codeSnippets,
           reference_solution: JSON.stringify(reference_solution),
           userId: req.user.id,
+          companyId: companyId || null,
         })
         .returning();
 
+      // If companyId is provided, get company details
+      let companyDetails = null;
+      if (companyId) {
+        const [company] = await db
+          .select()
+          .from(Company)
+          .where(eq(Company.id, companyId));
+        companyDetails = company;
+      }
+
       res.status(201).json({
         success: true,
-        message: "problem created Successfully",
-        problemData: newProblems,
+        message: "Problem created successfully",
+        data: {
+          ...newProblem,
+          company: companyDetails ? {
+            id: companyDetails.id,
+            name: companyDetails.name
+          } : null
+        }
       });
     } catch (error) {
       logger.error("Error during problem creation logic:", error);
@@ -122,7 +160,12 @@ export const createProblem = async (req, res) => {
       });
     }
   } catch (error) {
-    logger.info("create problem error:", error);
+    logger.error("Create problem error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
@@ -130,19 +173,56 @@ export const getAllProblem = async (req, res) => {
   try {
     logger.info("hitting get all problem route.....");
 
-    const getProblems = await db.select().from(problem);
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
-    if (!getProblems) {
-      return res.json({ error: "problems not found or getting errors..." });
+    // Get total count of problems
+    const [{ count }] = await db
+      .select({ count: sql`count(*)` })
+      .from(problem);
+
+    // Get problems with pagination
+    const problems = await db
+      .select()
+      .from(problem)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(problem.createdAt);
+
+    if (!problems || problems.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No problems found",
+        data: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0
+        }
+      });
     }
 
     res.status(200).json({
       success: true,
-      message: "getting all problems data...",
-      data: getProblems,
+      message: "Problems retrieved successfully",
+      data: problems,
+      pagination: {
+        total: Number(count),
+        page,
+        limit,
+        totalPages: Math.ceil(Number(count) / limit)
+      }
     });
   } catch (error) {
-    logger.info("error in getting all problems", error);
+    logger.error("Error in getting all problems:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error retrieving problems",
+      error: error.message
+    });
   }
 };
 
@@ -186,6 +266,7 @@ export const updateProblemById = async (req, res) => {
       examples,
       codeSnippets,
       reference_solution,
+      companyId
     } = req.body;
 
     if (req.user.role !== "admin") {
@@ -196,15 +277,32 @@ export const updateProblemById = async (req, res) => {
     }
 
     // Check if problem exists
-    const existingProblem = await db
+    const [existingProblem] = await db
       .select()
       .from(problem)
       .where(eq(problem.id, id));
-    if (!existingProblem || existingProblem.length === 0) {
+
+    if (!existingProblem) {
       return res.status(404).json({
         success: false,
         message: "Problem not found",
       });
+    }
+
+    // Validate company if provided
+    if (companyId) {
+      const [company] = await db
+        .select()
+        .from(Company)
+        .where(eq(Company.id, companyId));
+
+      if (!company) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid company ID provided",
+        });
+      }
+      logger.info(`Company found: ${company.name}`);
     }
 
     // Ensure tags and constraints are arrays
@@ -215,7 +313,7 @@ export const updateProblemById = async (req, res) => {
           .split(",")
           .map((t) => t.trim())
           .filter((t) => t)
-      : [];
+      : existingProblem.tags;
 
     const processedConstraints = Array.isArray(constraints)
       ? constraints
@@ -224,7 +322,7 @@ export const updateProblemById = async (req, res) => {
           .split(",")
           .map((c) => c.trim())
           .filter((c) => c)
-      : [];
+      : existingProblem.constraints;
 
     try {
       // Validate reference solution if provided
@@ -267,29 +365,42 @@ export const updateProblemById = async (req, res) => {
       const [updatedProblem] = await db
         .update(problem)
         .set({
-          title: title || existingProblem[0].title,
-          description: description || existingProblem[0].description,
-          difficulty: difficulty || existingProblem[0].difficulty,
-          constraints:
-            processedConstraints.length > 0
-              ? processedConstraints
-              : existingProblem[0].constraints,
-          testCases: testCases || existingProblem[0].testCases,
-          tags:
-            processedTags.length > 0 ? processedTags : existingProblem[0].tags,
-          example: examples || existingProblem[0].example,
-          codeSnippets: codeSnippets || existingProblem[0].codeSnippets,
+          title: title || existingProblem.title,
+          description: description || existingProblem.description,
+          difficulty: difficulty || existingProblem.difficulty,
+          constraints: processedConstraints,
+          testCases: testCases || existingProblem.testCases,
+          tags: processedTags,
+          example: examples || existingProblem.example,
+          codeSnippets: codeSnippets || existingProblem.codeSnippets,
           reference_solution: reference_solution
             ? JSON.stringify(reference_solution)
-            : existingProblem[0].reference_solution,
+            : existingProblem.reference_solution,
+          companyId:existingProblem.companyId, 
         })
         .where(eq(problem.id, id))
         .returning();
 
+      // Get company details if company ID is present
+      let companyDetails = null;
+      if (updatedProblem.companyId) {
+        const [company] = await db
+          .select()
+          .from(Company)
+          .where(eq(Company.id, updatedProblem.companyId));
+        companyDetails = company;
+      }
+
       res.status(200).json({
         success: true,
         message: "Problem updated successfully",
-        problemData: updatedProblem,
+        data: {
+          ...updatedProblem,
+          company: companyDetails ? {
+            id: companyDetails.id,
+            name: companyDetails.name
+          } : null
+        }
       });
     } catch (error) {
       logger.error("Error during problem update logic:", error);
@@ -361,6 +472,18 @@ export const getAllProblemSolvedByUser = async (req, res) => {
     logger.info("hitting get solved problem route....");
     const userId = req.user.id;
 
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get total count of solved problems
+    const [{ count }] = await db
+      .select({ count: sql`count(*)` })
+      .from(problemSolved)
+      .where(eq(problemSolved.userId, userId));
+
+    // Get solved problems with pagination
     const solvedProblems = await db
       .select({
         id: problemSolved.id,
@@ -376,27 +499,28 @@ export const getAllProblemSolvedByUser = async (req, res) => {
       })
       .from(problemSolved)
       .innerJoin(problem, eq(problemSolved.problemId, problem.id))
-      .where(eq(problemSolved.userId, userId));
-
-    if (solvedProblems.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No problems solved yet",
-        data: [],
-      });
-    }
+      .where(eq(problemSolved.userId, userId))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(problemSolved.createdAt);
 
     return res.status(200).json({
       success: true,
-      message: "Problems fetched successfully",
-      data: solvedProblems
+      message: solvedProblems.length === 0 ? "No problems solved yet" : "Problems fetched successfully",
+      data: solvedProblems,
+      pagination: {
+        total: Number(count),
+        page,
+        limit,
+        totalPages: Math.ceil(Number(count) / limit)
+      }
     });
   } catch (error) {
     logger.error("Error in getAllProblemSolvedByUser:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch problems",
-      error: error.message,
+      message: "Failed to fetch solved problems",
+      error: error.message
     });
   }
 };

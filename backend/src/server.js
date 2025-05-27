@@ -11,10 +11,15 @@ import problemRoute from "./routes/problem.route.js"
 import executeCodeRoute from "./routes/execute-code.route.js"
 import submissionRoute from "./routes/submission.route.js"
 import playlistRoute from "./routes/playlist.route.js"
+import companyRoute from "./routes/company.route.js"
+import adminRoute from "./routes/admin.route.js"
 const app = express();
 const PORT = _config.PORT;
 
-app.use(cors({ origin: "*" }));
+app.use(cors({
+  origin: "http://localhost:5173", 
+  credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -31,6 +36,8 @@ app.use("/api/v1/problem",problemRoute)
 app.use("/api/v1/execute-code",executeCodeRoute)
 app.use("/api/v1/submission",submissionRoute)
 app.use("/api/v1/playlist",playlistRoute)
+app.use("/api/v1/company",companyRoute)
+app.use('/api/v1/admin',adminRoute)
 
 // Error handler middleware placeholder
 app.use((err, req, res, next) => {

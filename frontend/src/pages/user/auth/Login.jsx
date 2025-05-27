@@ -32,20 +32,13 @@ const Login = () => {
   const navigate = useNavigate()
   const {login , isLoggingIn} = useAuthStore()
 
- 
-
   const onSubmit = async (values) => {
-    console.log(values)
-   try {
-    await  login(values)
-    navigate('/')
-    window.location.reload()
-    
-   } catch (error) {
-    console.log("logging error:", error)
-
-    
-   }
+    try {
+      await login(values);
+      navigate('/');
+    } catch (error) {
+      console.error("Login error:", error);
+    }
   }
 
   return (
@@ -80,7 +73,7 @@ const Login = () => {
             </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>
-          <Button type="submit" className="w-full h-12 text-base mt-2" disabled={isLoggingIn}>
+          <Button type="submit" className="w-full h-12 text-base mt-2 cursor-pointer" disabled={isLoggingIn}>
             {isLoggingIn ? 'Logging in...' : 'Login'}
           </Button>
         </form>

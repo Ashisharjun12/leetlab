@@ -37,17 +37,13 @@ const SignUp = () => {
   const navigate = useNavigate()
 
   const onSubmit = async (values) => {
-    try{
-      await signup(values)
-      navigate('/')
-      console.log("val",values)
-    }catch(error){
-      console.log("error in signup:",error)
-
+    try {
+      await signup(values);
+      navigate('/');
+    } catch (error) {
+      // Error is already handled in the store with toast
+      console.error("Signup error:", error);
     }
-
-    
-   
   }
 
   return (
@@ -87,7 +83,7 @@ const SignUp = () => {
             </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>
-          <Button type="submit" className="w-full h-12 text-base mt-2" disabled={isSigniUp}>
+          <Button type="submit" className="w-full h-12 text-base mt-2 cursor-pointer" disabled={isSigniUp}>
             {isSigniUp ? 'Signing Up...' : 'Sign Up'}
           </Button>
         </form>

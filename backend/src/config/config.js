@@ -22,7 +22,6 @@ export const _config = {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
   AWS_S3_BUCKET,
-  JWT_SECRET,
   NODE_ENV,
   JUDGE0_URL,
 };

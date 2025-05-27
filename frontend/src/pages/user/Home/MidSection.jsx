@@ -44,7 +44,7 @@ const features = [
     icon: <Mic className="w-7 h-7 text-primary" />,
     title: 'AI Interview Prep',
     description: 'Mock interviews, behavioral questions, and more. (Coming soon!)',
-    badge: 'Coming Soon'
+    badge: 'Beta'
   }
 ]
 
