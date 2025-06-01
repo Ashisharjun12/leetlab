@@ -12,6 +12,10 @@ const {
   AWS_S3_BUCKET,
   NODE_ENV,
   JUDGE0_URL,
+  IMAGEKIT_PUBLIC_KEY,
+  IMAGEKIT_PRIVATE_KEY,
+  IMAGEKIT_ENDPOINT
+
 } = process.env;
 
 export const _config = {
@@ -24,4 +28,7 @@ export const _config = {
   AWS_S3_BUCKET,
   NODE_ENV,
   JUDGE0_URL,
+  IMAGEKIT_ENDPOINT,
+  IMAGEKIT_PRIVATE_KEY,
+  IMAGEKIT_PUBLIC_KEY
 };

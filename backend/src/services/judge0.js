@@ -15,8 +15,8 @@ export const getJudge0LanguageId = (langguage)=>{
 
 export const getLanguageName = (languageId)=>{
     const languageMap = {
-        71:'PYTHON',
         62:'JAVA',
+        71:'PYTHON',
         63:'JAVASCRIPT',
         54:'C++'
     }

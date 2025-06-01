@@ -9,10 +9,8 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.js",
     "db:migrate": "node migrate.js",
     "db:studio": "drizzle-kit studio"
-  
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.802.0",
     "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
@@ -21,9 +19,10 @@
     "drizzle-orm": "^0.38.4",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "imagekit": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "multer-s3": "^3.0.1",
+    "multer": "^2.0.0",
     "postgres": "^3.4.5",
     "uuid": "^11.0.5",
     "winston": "^3.17.0"

@@ -7,7 +7,7 @@ import { problem } from "../models/problem.model.js";
 export const createCompany = async (req, res) => {
     try {
         logger.info("hitting create compnay route...")
-        const { name } = req.body;
+        const { name ,companyUrl} = req.body;
   
         if (!name) {
             return res.json({
@@ -20,6 +20,7 @@ export const createCompany = async (req, res) => {
             .insert(Company)
             .values({
                 name,
+                companyUrl: companyUrl ? { url: companyUrl } : null,
             })
             .returning();
   
@@ -182,3 +183,4 @@ export const updateComapny = async(req,res)=>{
 }
 
 export const getCompnayByProblemId = async (req, res) => {};
+

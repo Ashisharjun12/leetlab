@@ -13,6 +13,7 @@ import submissionRoute from "./routes/submission.route.js"
 import playlistRoute from "./routes/playlist.route.js"
 import companyRoute from "./routes/company.route.js"
 import adminRoute from "./routes/admin.route.js"
+import uploadRoute from "./routes/upload.route.js"
 const app = express();
 const PORT = _config.PORT;
 
@@ -32,6 +33,7 @@ app.get("/health", (req, res) => {
 
 //routes
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/upload",uploadRoute)
 app.use("/api/v1/problem",problemRoute)
 app.use("/api/v1/execute-code",executeCodeRoute)
 app.use("/api/v1/submission",submissionRoute)
@@ -52,6 +54,8 @@ app.listen(PORT, () => {
 
 process.on("unhandledRejection", (reason, promise) => {
   logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  console.log("promise",promise)
+  console.log("reson",reason)
 });
 
 export default app; 

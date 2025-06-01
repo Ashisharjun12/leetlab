@@ -15,6 +15,13 @@
       "when": 1748371440948,
       "tag": "0001_friendly_gertrude_yorkes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1748800883752,
+      "tag": "0002_chubby_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }

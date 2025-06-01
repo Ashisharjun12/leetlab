@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 // Import form libraries
 import { useForm } from "react-hook-form";
@@ -35,6 +36,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Upload } from '@/api/api';
+
 
 // Updated language order and icons
 const SUPPORTED_LANGUAGES = ['JAVASCRIPT', 'PYTHON', 'C++', 'JAVA'];
@@ -74,6 +77,8 @@ const AddProblem = () => {
   const [selectedLanguages, setSelectedLanguages] = useState(['JAVASCRIPT']);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(false);
 
   // Initialize react-hook-form
   const form = useForm({
@@ -182,6 +187,13 @@ const AddProblem = () => {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
   const handleCreateCompany = async () => {
     if (!newCompanyName.trim()) {
       toast.error("Company name is required");
@@ -189,13 +201,48 @@ const AddProblem = () => {
     }
 
     try {
-     await createCompany({ name: newCompanyName.trim() });
-      await getAllCompanies(); 
-      setNewCompanyName(''); 
-      setIsDialogOpen(false); 
+      setUploadProgress(true);
+      let companyUrl = null;
+
+      // If file is selected, upload it first
+      if (selectedFile) {
+        try {
+          // Upload file to backend
+          const { data: uploadResult } = await Upload.upload(selectedFile);
+          console.log("Upload result:", uploadResult);
+
+          if (uploadResult.success) {
+            companyUrl = {
+              url: uploadResult.url,
+              fileId: uploadResult.fileId
+            };
+          } else {
+            throw new Error(uploadResult.message || "Upload failed");
+          }
+        } catch (uploadError) {
+          console.error("Error uploading file:", uploadError);
+          toast.error("Error uploading company logo");
+          setUploadProgress(false);
+          return;
+        }
+      }
+
+      // Create company with logo URL
+      await createCompany({ 
+        name: newCompanyName.trim(),
+        companyUrl
+      });
+      
+      await getAllCompanies();
+      setNewCompanyName('');
+      setSelectedFile(null);
+      setIsDialogOpen(false);
       toast.success("Company created successfully");
     } catch (error) {
       console.error("Error creating company:", error);
+      toast.error("Error creating company");
+    } finally {
+      setUploadProgress(false);
     }
   };
 
@@ -284,7 +331,16 @@ const AddProblem = () => {
                                 <SelectItem value="null">None</SelectItem>
                                 {companies.map(company => (
                                   <SelectItem key={company.id} value={company.id}>
-                                    {company.name}
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-6 w-6">
+                                        {company.companyUrl?.url ? (
+                                          <AvatarImage src={company.companyUrl.url.url} alt={company.name} />
+                                        ) : (
+                                          <AvatarFallback>{company.name.charAt(0)}</AvatarFallback>
+                                        )}
+                                      </Avatar>
+                                      <span>{company.name}</span>
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -300,28 +356,44 @@ const AddProblem = () => {
                                 <DialogHeader>
                                   <DialogTitle>Add New Company</DialogTitle>
                                   <DialogDescription>
-                                    Enter the name of the new company you want to add.
+                                    Enter the name of the new company and upload a logo (optional).
                                   </DialogDescription>
                                 </DialogHeader>
-                                <div className="py-4">
+                                <div className="py-4 space-y-4">
                                   <Input
                                     placeholder="Company name"
                                     value={newCompanyName}
                                     onChange={(e) => setNewCompanyName(e.target.value)}
                                   />
+                                  <div className="space-y-2">
+                                    <Label>Company Logo (Optional)</Label>
+                                    <Input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handleFileChange}
+                                    />
+                                    {selectedFile && (
+                                      <p className="text-sm text-muted-foreground">
+                                        Selected file: {selectedFile.name}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                                 <DialogFooter>
                                   <Button
                                     variant="outline"
-                                    onClick={() => setIsDialogOpen(false)}
+                                    onClick={() => {
+                                      setIsDialogOpen(false);
+                                      setSelectedFile(null);
+                                    }}
                                   >
                                     Cancel
                                   </Button>
                                   <Button
                                     onClick={handleCreateCompany}
-                                    disabled={isCreatingCompany}
+                                    disabled={isCreatingCompany || uploadProgress}
                                   >
-                                    {isCreatingCompany ? "Creating..." : "Create Company"}
+                                    {isCreatingCompany || uploadProgress ? "Creating..." : "Create Company"}
                                   </Button>
                                 </DialogFooter>
                               </DialogContent>

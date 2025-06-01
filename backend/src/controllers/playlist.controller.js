@@ -3,6 +3,7 @@ import { db } from "../config/database.js";
 import { playlist } from "../models/playlist.model.js";
 import { problemInPlaylist } from "../models/problemInPlaylist.model.js";
 import { eq, inArray ,and} from "drizzle-orm";
+import { problem } from "../models/problem.model.js";
 
 export const createPlaylist = async (req, res) => {
   try {
@@ -68,7 +69,7 @@ export const getPlayListDetails = async (req, res) => {
 
     const { playlistId } = req.params;
 
-    const playlistDetails = await db
+    const [playlistDetails] = await db
       .select()
       .from(playlist)
       .where(eq(playlist.id, playlistId));
@@ -80,10 +81,24 @@ export const getPlayListDetails = async (req, res) => {
       });
     }
 
+    // Get problems in the playlist
+    const problemsInPlaylist = await db
+      .select({
+        problem: problem,
+      })
+      .from(problemInPlaylist)
+      .innerJoin(problem, eq(problemInPlaylist.problemId, problem.id))
+      .where(eq(problemInPlaylist.playlistId, playlistId));
+
+    const problems = problemsInPlaylist.map(item => item.problem);
+
     res.status(200).json({
       success: true,
       message: "Playlist details fetched successfully",
-      playlist: playlistDetails,
+      playlist: {
+        ...playlistDetails,
+        problems,
+      },
     });
   } catch (error) {
     logger.error(error);

@@ -26,6 +26,7 @@ export const useCompanyStore = create((set) => ({
     try {
       const response = await companyAPI.getAllCompanies();
       set({ companies: response.data.data });
+      console.log("data of compam",response.data.data)
       return response.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Error fetching companies");

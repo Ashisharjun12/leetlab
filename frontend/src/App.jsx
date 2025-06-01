@@ -16,8 +16,9 @@ import AdminSettings from './pages/admin/pages/AdminSettings'
 import AdminLayout from './pages/admin/layout/AdminLayout'
 import EditProblem from './pages/admin/pages/EditProblem'
 import ProtectedRoute from './pages/user/routes/ProtectedRoute'
-import ProblemSet from './pages/user/pages/ProblemSet'
 import Interview from './pages/user/pages/Interview'
+import ProblemSet from './pages/user/pages/ProblemSet'
+
 
 const App = () => {
 
@@ -49,6 +50,8 @@ const App = () => {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path='/problem-set' element={<ProblemSet />} />
+              {/* <Route path='/playlist/:playlistId' element={<PlaylistDetails />} />
+              <Route path='/problem/:problemId' element={<ProblemDetailsPage />} /> */}
               <Route path='/interview' element={<Interview />} />
             </Route>
           </Route>
