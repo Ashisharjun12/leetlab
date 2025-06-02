@@ -2,7 +2,7 @@ import { pgEnum } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["user", "admin"]);
 
-export const problemDifficulty = pgEnum("problem_difficulty", [
+export const problemDifficulty = pgEnum("problemdifficulty", [
   "easy",
   "medium",
   "hard",

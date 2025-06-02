@@ -54,7 +54,8 @@ export const adminAPI = {
 //compnay api
 export const companyAPI = {
     createCompany: (data)=>axiosInstance.post('/company',data),
-    getAllCompanies: () => axiosInstance.get('/company')
+    getAllCompanies: () => axiosInstance.get('/company'),
+    getCompanyById: (id) => axiosInstance.get(`/company/${id}`)
 }
 
 
