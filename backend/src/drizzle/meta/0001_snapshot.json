@@ -1,6 +1,6 @@
 {
-  "id": "8a3620d4-bf75-4949-8e62-910349acdae3",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "293866c8-0e0e-413c-8e33-9d5722a63ce4",
+  "prevId": "8a3620d4-bf75-4949-8e62-910349acdae3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -358,7 +358,8 @@
           "name": "companies",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'[]'::jsonb"
         },
         "description": {
           "name": "description",
@@ -384,25 +385,29 @@
           "name": "tags",
           "type": "text[]",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'{}'"
         },
         "example": {
           "name": "example",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'{}'::jsonb"
         },
         "constraints": {
           "name": "constraints",
           "type": "text[]",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'{}'"
         },
         "hints": {
           "name": "hints",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'[]'::jsonb"
         },
         "editorial": {
           "name": "editorial",
@@ -414,25 +419,29 @@
           "name": "test_cases",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'[]'::jsonb"
         },
         "submissions": {
           "name": "submissions",
           "type": "text[]",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'{}'"
         },
         "code_snippets": {
           "name": "code_snippets",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'{}'::jsonb"
         },
         "reference_solution": {
           "name": "reference_solution",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'{}'::jsonb"
         },
         "created_at": {
           "name": "created_at",

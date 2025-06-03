@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, FileText, Plus } from 'lucide-react';
+import { X, FileText, Plus, ChevronUp, ChevronDown, Upload, Image as ImageIcon } from 'lucide-react';
 import { sampleProblems } from '@/data/sampleProblems';
 import {
   Dialog,
@@ -36,16 +36,31 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Upload } from '@/api/api';
+import { Upload as UploadApi } from '@/api/api';
+import { cn } from '@/lib/utils';
 
+// Import necessary shadcn components for dropdown and dialog
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 // Updated language order and icons
-const SUPPORTED_LANGUAGES = ['JAVASCRIPT', 'PYTHON', 'C++', 'JAVA'];
+const SUPPORTED_LANGUAGES = ['JAVASCRIPT', 'PYTHON', 'CPP', 'JAVA'];
 
 const languageIcons = {
   JAVASCRIPT: 'https://skillicons.dev/icons?i=js',
   PYTHON: 'https://skillicons.dev/icons?i=py',
-  'C++': 'https://skillicons.dev/icons?i=cpp',
+  CPP: 'https://skillicons.dev/icons?i=cpp',
   JAVA: 'https://skillicons.dev/icons?i=java',
 };
 
@@ -54,20 +69,25 @@ const problemSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   difficulty: z.enum(['easy', 'medium', 'hard'], "Invalid difficulty"),
-  companyId: z.string().uuid("Invalid company ID").nullable().optional(),
+  companyIds: z.array(z.string().uuid("Invalid company ID")).optional(),
   tags: z.string().nullable().optional(),
   constraints: z.string().nullable().optional(),
-  examples: z.record(z.string(), z.object({
+  examples: z.record(z.string(), z.array(z.object({
     input: z.string().nullable().optional(),
     output: z.string().nullable().optional(),
     explanation: z.string().nullable().optional(),
-  })).optional(),
+  }))).optional(),
   testCases: z.array(z.object({
     input: z.string().nullable().optional(),
     output: z.string().nullable().optional(),
   })).optional(),
   codeSnippets: z.record(z.string(), z.string().nullable().optional()).optional(),
   reference_solution: z.record(z.string(), z.string().nullable().optional()).optional(),
+  hints: z.array(z.string().min(1, "Hint cannot be empty")).optional(),
+  problemImage: z.object({
+    url: z.string(),
+    fileId: z.string()
+  }).nullable().optional() // Make problemImage optional and nullable
 });
 
 const AddProblem = () => {
@@ -79,6 +99,9 @@ const AddProblem = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(false);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [problemImage, setProblemImage] = useState(null);
+  const [openExamples, setOpenExamples] = useState({});
 
   // Initialize react-hook-form
   const form = useForm({
@@ -87,10 +110,10 @@ const AddProblem = () => {
       title: '',
       description: '',
       difficulty: 'easy',
-      companyId: null,
+      companyIds: [],
       tags: '',
       constraints: '',
-      examples: {},
+      examples: Object.fromEntries(SUPPORTED_LANGUAGES.map(lang => [lang, [{ input: '', output: '', explanation: '' }]])),
       testCases: [
         {
           input: '',
@@ -98,39 +121,51 @@ const AddProblem = () => {
         }
       ],
       codeSnippets: {},
-      reference_solution: {}
+      reference_solution: Object.fromEntries(SUPPORTED_LANGUAGES.map(lang => [lang, ''])),
+      hints: [''],
+      problemImage: null
     },
   });
 
   const { watch, setValue, reset } = form;
   const watchedTestCases = watch('testCases');
-
+  const watchedProblemImage = watch('problemImage');
 
 
   useEffect(() => {
     getAllCompanies();
   }, []);
 
+  // Initialize selected companies from form data when component mounts or companies load
+  useEffect(() => {
+    const initialCompanyIds = form.getValues('companyIds');
+    if (initialCompanyIds && Array.isArray(initialCompanyIds)) {
+      setSelectedCompanies(initialCompanyIds);
+    }
+  }, [companies]); // Re-run when companies data changes
+
+  useEffect(() => {
+    setProblemImage(watchedProblemImage);
+  }, [watchedProblemImage]);
+
+
   const handleLanguageToggle = (language) => {
     setSelectedLanguages(prev => {
       if (prev.includes(language)) {
-        // Remove language data from form state
-        setTimeout(() => {
-          setValue(`codeSnippets.${language}`, undefined, { shouldDirty: true });
-          setValue(`reference_solution.${language}`, undefined, { shouldDirty: true });
-          setValue(`examples.${language}`, undefined, { shouldDirty: true });
-        }, 0);
-
+        // Remove language from the selected list
+        // Do NOT explicitly set form values to undefined here
         return prev.filter(lang => lang !== language);
       } else {
-        // Add language data with empty defaults to form state
+        // Add language to the selected list
+        // Explicitly set default values for the added language
         setValue(`codeSnippets.${language}`, '');
-        setValue(`reference_solution.${language}`, '');
-        setValue(`examples.${language}`, {
-          input: '',
-          output: '',
-          explanation: ''
-        });
+        setValue(`reference_solution.${language}`, '', { shouldDirty: true });
+        setValue(`examples.${language}`, [{ input: '', output: '', explanation: '' }]);
+        // Open the first example by default when adding a new language
+        setOpenExamples(prevOpen => ({
+          ...prevOpen,
+          [`${language}-0`]: true,
+        }));
         return [...prev, language];
       }
     });
@@ -156,34 +191,91 @@ const AddProblem = () => {
     reset(sample);
     // Set selected languages based on sample data code snippets keys
     setSelectedLanguages(Object.keys(sample.codeSnippets || {}));
+    // Set selected companies from sample data
+    setSelectedCompanies(sample.companyIds || []);
+    // Set problem image from sample data
+    setProblemImage(sample.problemImage || null);
   };
+
+  // Handle company selection
+  const handleCompanySelection = (companyId) => {
+    setSelectedCompanies(prev => {
+      const newSelection = prev.includes(companyId)
+        ? prev.filter(id => id !== companyId)
+        : [...prev, companyId];
+
+      // Update form value after state change
+      form.setValue('companyIds', newSelection, { shouldDirty: true });
+      console.log('Updated selected companies:', newSelection);
+      return newSelection;
+    });
+  };
+
 
   const onSubmit = async (data) => {
     try {
+      console.log('Form data before processing:', data);
+      console.log('Selected companies state:', selectedCompanies);
+
       const processedData = {
         ...data,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         constraints: data.constraints ? data.constraints.split(',').map(constraint => constraint.trim()).filter(constraint => constraint) : [],
-         // Ensure companyId is null if empty string
-        companyId: data.companyId === '' ? null : data.companyId,
+        companyIds: selectedCompanies, // Use the state value directly
+        problemImage: problemImage // Use the state value for problem image
       };
 
-      // Filter out undefined values from nested objects (due to language toggle logic)
+      console.log('Processed data with companies and image:', processedData);
+
+      // Process examples to ensure they are arrays and filter out undefined/empty
       processedData.examples = Object.fromEntries(
-        Object.entries(processedData.examples || {}).filter(([_, v]) => v !== undefined)
-      );
-       processedData.codeSnippets = Object.fromEntries(
-        Object.entries(processedData.codeSnippets || {}).filter(([_, v]) => v !== undefined)
-      );
-       processedData.reference_solution = Object.fromEntries(
-        Object.entries(processedData.reference_solution || {}).filter(([_, v]) => v !== undefined)
+        Object.entries(processedData.examples || {})
+          .filter(([_, v]) => v !== undefined)
+          .map(([lang, examples]) => [lang, Array.isArray(examples) ? examples.filter(ex => ex.input || ex.output || ex.explanation) : []])
+          .filter(([_, examples]) => examples.length > 0)
       );
 
 
-      await createProblem(processedData);
-      navigate('/admin/all-problems');
+      // Process code snippets, filter out undefined/empty
+      processedData.codeSnippets = Object.fromEntries(
+        Object.entries(processedData.codeSnippets || {})
+          .filter(([_, v]) => v !== undefined && v.trim() !== '')
+      );
+
+      // Process reference solutions to ensure they are strings and filter out empty
+      processedData.reference_solution = Object.fromEntries(
+        Object.entries(processedData.reference_solution || {})
+          .map(([lang, solution]) => [lang, solution || ''])
+          .filter(([_, v]) => v.trim() !== '')
+      );
+
+
+      // Process test cases, filter out undefined/empty
+      processedData.testCases = processedData.testCases
+        ? processedData.testCases.filter(tc => tc.input || tc.output)
+        : [];
+
+
+      // Process hints, filter out undefined/empty
+      processedData.hints = processedData.hints
+        ? processedData.hints.filter(hint => hint.trim() !== '')
+        : [];
+
+
+      console.log('Final processed data:', processedData);
+
+      const result = await createProblem(processedData);
+      console.log('Create problem result:', result);
+
+      if (result) {
+        toast.success('Problem created successfully');
+        navigate('/admin/all-problems');
+      } else {
+        toast.error('Failed to create problem');
+      }
     } catch (error) {
       console.error('Error creating problem:', error);
+      toast.error(error.message || 'Failed to create problem');
     }
   };
 
@@ -208,7 +300,7 @@ const AddProblem = () => {
       if (selectedFile) {
         try {
           // Upload file to backend
-          const { data: uploadResult } = await Upload.upload(selectedFile);
+          const { data: uploadResult } = await UploadApi.upload(selectedFile);
           console.log("Upload result:", uploadResult);
 
           if (uploadResult.success) {
@@ -228,11 +320,11 @@ const AddProblem = () => {
       }
 
       // Create company with logo URL
-      await createCompany({ 
+      await createCompany({
         name: newCompanyName.trim(),
         companyUrl
       });
-      
+
       await getAllCompanies();
       setNewCompanyName('');
       setSelectedFile(null);
@@ -245,6 +337,127 @@ const AddProblem = () => {
       setUploadProgress(false);
     }
   };
+
+  // Handle problem image upload
+  const handleProblemImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploadProgress(true);
+      const { data: uploadResult } = await UploadApi.upload(file);
+
+      if (uploadResult.success) {
+        setProblemImage({
+          url: uploadResult.url,
+          fileId: uploadResult.fileId
+        });
+        form.setValue('problemImage', {
+          url: uploadResult.url,
+          fileId: uploadResult.fileId
+        });
+      } else {
+        toast.error("Failed to upload image");
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Error uploading image");
+    } finally {
+      setUploadProgress(false);
+    }
+  };
+
+  // Handle adding new example for a language
+  const addExample = (language) => {
+    const currentExamples = form.getValues(`examples.${language}`) || [];
+    if (!Array.isArray(currentExamples)) {
+      form.setValue(`examples.${language}`, []);
+    }
+    const newExamples = [
+      ...(Array.isArray(currentExamples) ? currentExamples : []),
+      { input: '', output: '', explanation: '' }
+    ];
+    form.setValue(`examples.${language}`, newExamples);
+    // Open the newly added example by default
+    setOpenExamples(prev => ({
+      ...prev,
+      [`${language}-${newExamples.length - 1}`]: true
+    }));
+  };
+
+
+  // Handle removing an example
+  const removeExample = (language, index) => {
+    const currentExamples = form.getValues(`examples.${language}`) || [];
+    if (!Array.isArray(currentExamples)) {
+      form.setValue(`examples.${language}`, []);
+      return;
+    }
+    const newExamples = currentExamples.filter((_, i) => i !== index);
+    form.setValue(`examples.${language}`, newExamples);
+    // Close the removed example and ensure at least one is open if others exist
+    setOpenExamples(prev => {
+      const newState = { ...prev };
+      delete newState[`${language}-${index}`];
+      // Adjust indices of examples after the removed one
+      const reindexedState = {};
+      Object.keys(newState).forEach(key => {
+        const [lang, oldIndex] = key.split('-');
+        const oldIndexInt = parseInt(oldIndex, 10);
+        if (lang === language && oldIndexInt > index) {
+          reindexedState[`${language}-${oldIndexInt - 1}`] = newState[key];
+        } else {
+          reindexedState[key] = newState[key];
+        }
+      });
+
+      // Ensure at least one example is open if there are examples left
+      if (newExamples.length > 0 && Object.keys(reindexedState).filter(key => key.startsWith(`${language}-`)).every(key => !reindexedState[key])) {
+         reindexedState[`${language}-0`] = true; // Open the first example
+      }
+
+
+      return reindexedState;
+    });
+  };
+
+  // Handle adding new reference solution for a language
+  const addReferenceSolution = (language) => {
+    const currentSolutions = form.getValues(`reference_solution.${language}`) || [];
+     // Reference solution is a single string per language, no need to add multiple
+     console.warn("Attempted to add multiple reference solutions. Reference solution is a single string per language.");
+  };
+
+  // Handle removing a reference solution
+  const removeReferenceSolution = (language, index) => {
+    // Reference solution is a single string per language, no need to remove
+    console.warn("Attempted to remove reference solution. Reference solution is a single string per language.");
+  };
+
+  // Add a function to toggle example visibility
+  const toggleExample = (language, index) => {
+    setOpenExamples(prev => ({
+      ...prev,
+      [`${language}-${index}`]: !prev[`${language}-${index}`]
+    }));
+  };
+
+  // Effect to ensure the first example of each selected language is open by default
+  useEffect(() => {
+    const initialOpenExamples = {};
+    selectedLanguages.forEach(lang => {
+      const examples = form.getValues(`examples.${lang}`);
+       if (Array.isArray(examples) && examples.length > 0) {
+        // Check if any example is already open for this language
+        const anyOpen = Object.keys(openExamples).some(key => key.startsWith(`${lang}-`) && openExamples[key]);
+        if (!anyOpen) {
+           initialOpenExamples[`${lang}-0`] = true;
+        }
+       }
+    });
+    setOpenExamples(prev => ({ ...prev, ...initialOpenExamples }));
+  }, [selectedLanguages, form.getValues('examples')]);
+
 
   return (
     <Form {...form}>
@@ -261,6 +474,7 @@ const AddProblem = () => {
                         key={index}
                         variant="outline"
                         size="sm"
+                        type="button"
                         onClick={() => loadSampleData(sample)}
                         className="flex items-center gap-2"
                       >
@@ -288,13 +502,13 @@ const AddProblem = () => {
                   />
 
                   <div className="grid grid-cols-2 gap-4">
-                     <FormField
+                    <FormField
                       control={form.control}
                       name="difficulty"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Difficulty</FormLabel>
-                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select difficulty" />
@@ -311,44 +525,78 @@ const AddProblem = () => {
                       )}
                     />
 
+                    {/* Company Selection Section */}
                     <FormField
                       control={form.control}
-                      name="companyId"
+                      name="companyIds"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Company</FormLabel>
-                          <div className="flex gap-2">
-                            <Select
-                              onValueChange={(value) => field.onChange(value === "null" ? null : value)}
-                              value={field.value === null ? "null" : field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select company" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="null">None</SelectItem>
-                                {companies.map(company => (
-                                  <SelectItem key={company.id} value={company.id}>
-                                    <div className="flex items-center gap-2">
-                                      <Avatar className="h-6 w-6">
-                                        {company.companyUrl?.url ? (
-                                          <AvatarImage src={company.companyUrl.url.url} alt={company.name} />
-                                        ) : (
-                                          <AvatarFallback>{company.name.charAt(0)}</AvatarFallback>
-                                        )}
-                                      </Avatar>
-                                      <span>{company.name}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            
+                          <FormLabel>Companies</FormLabel>
+                          <div className="flex items-center gap-2">
+                            {/* Company Selection Dropdown */}
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                      "w-64 justify-between", // Adjusted width
+                                      !field.value || field.value.length === 0 && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value && field.value.length > 0
+                                      ? `${field.value.length} companies selected`
+                                      : "Select companies"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-0"> {/* Adjusted width */}
+                                <Command>
+                                  <CommandInput placeholder="Search companies..." />
+                                  <CommandEmpty>No companies found.</CommandEmpty>
+                                  <CommandGroup className="max-h-64 overflow-auto">
+                                    {companies.map((company) => (
+                                      <CommandItem
+                                        key={company.id}
+                                        value={company.name}
+                                        onSelect={() => {
+                                          const currentValue = field.value || [];
+                                          const newValue = currentValue.includes(company.id)
+                                            ? currentValue.filter(id => id !== company.id)
+                                            : [...currentValue, company.id];
+                                          field.onChange(newValue);
+                                          setSelectedCompanies(newValue);
+                                        }}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              field.value?.includes(company.id) ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          <Avatar className="h-6 w-6">
+                                            {company.companyUrl?.url?.url ? (
+                                              <AvatarImage src={company.companyUrl.url.url} alt={company.name} />
+                                            ) : (
+                                              <AvatarFallback>{company.name.charAt(0)}</AvatarFallback>
+                                            )}
+                                          </Avatar>
+                                          <span>{company.name}</span>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+
+                            {/* Add New Company Dialog Trigger */}
                             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                               <DialogTrigger asChild>
-                                <Button variant="outline" size="icon">
+                                <Button variant="outline" size="icon" type="button">
                                   <Plus className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
@@ -386,12 +634,14 @@ const AddProblem = () => {
                                       setIsDialogOpen(false);
                                       setSelectedFile(null);
                                     }}
+                                    type="button"
                                   >
                                     Cancel
                                   </Button>
                                   <Button
                                     onClick={handleCreateCompany}
                                     disabled={isCreatingCompany || uploadProgress}
+                                    type="button"
                                   >
                                     {isCreatingCompany || uploadProgress ? "Creating..." : "Create Company"}
                                   </Button>
@@ -421,13 +671,59 @@ const AddProblem = () => {
 
                   <FormField
                     control={form.control}
-                    name="description"
+                    name="constraints"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Constraints (comma-separated)</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Write a description..." className="min-h-[100px]" {...field} />
+                          <Textarea placeholder="e.g., 1 <= n <= 100, 1 <= arr[i] <= 1000" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Hints section */}
+                  <FormField
+                    control={form.control}
+                    name="hints"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hints</FormLabel>
+                        <div className="space-y-2">
+                          {(field.value || [""]).map((hint, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <Input
+                                value={hint}
+                                onChange={e => {
+                                  const newHints = [...field.value];
+                                  newHints[idx] = e.target.value;
+                                  field.onChange(newHints);
+                                }}
+                                placeholder={`Hint ${idx + 1}`}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const newHints = field.value.filter((_, i) => i !== idx);
+                                  field.onChange(newHints.length ? newHints : [""]);
+                                }}
+                                disabled={(field.value?.length || 1) === 1}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => field.onChange([...(field.value || [""]), ""])}
+                          >
+                            Add Hint
+                          </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -435,12 +731,12 @@ const AddProblem = () => {
 
                   <FormField
                     control={form.control}
-                    name="constraints"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Constraints (comma-separated)</FormLabel>
+                        <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="e.g., 1 <= n <= 100, 1 <= arr[i] <= 1000" {...field} />
+                          <Textarea placeholder="Write a description..." className="min-h-[100px]" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -497,6 +793,90 @@ const AddProblem = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Problem Image Upload Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Problem Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="problemImage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload Image (Optional)</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col items-center space-y-4">
+                           <div className="relative w-full h-40 border-2 border-dashed rounded-lg flex items-center justify-center overflow-hidden">
+                            {problemImage ? (
+                              <>
+                                <img
+                                  src={problemImage.url}
+                                  alt="Problem"
+                                  className="w-full h-full object-cover"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute top-2 right-2 z-10"
+                                  onClick={() => {
+                                    setProblemImage(null);
+                                    form.setValue('problemImage', null);
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                <ImageIcon className="h-10 w-10" />
+                                <span className="text-base">No image uploaded</span>
+                              </div>
+                            )}
+                          </div>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleProblemImageUpload}
+                            disabled={uploadProgress}
+                            className="hidden"
+                            id="problem-image-upload"
+                          />
+                          <Label
+                            htmlFor="problem-image-upload"
+                            className={cn(
+                              "flex items-center justify-center gap-2 cursor-pointer w-full",
+                              uploadProgress && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              disabled={uploadProgress}
+                              onClick={() => document.getElementById('problem-image-upload').click()}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {uploadProgress ? "Uploading..." : "Select Image"}
+                            </Button>
+                          </Label>
+                          {problemImage && (
+                             <p className="text-sm text-muted-foreground">
+                               Image uploaded: {problemImage.url.split('/').pop()}
+                             </p>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+
           </div>
         </div>
 
@@ -527,46 +907,103 @@ const AddProblem = () => {
               <div className="p-4 space-y-6">
                 {selectedLanguages.map(language => (
                   <div key={language} className="space-y-4">
-                     <div className="space-y-2">
-                      <Label>Example for {language}</Label>
-                       <div className="grid grid-cols-2 gap-4">
-                           <FormField
-                            control={form.control}
-                            name={`examples.${language}.input`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                   <Input placeholder="Input" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
+                    <div className="flex items-center justify-between">
+                      <Label>Examples for {language}</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => addExample(language)}
+                      >
+                        Add Example
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {(() => {
+                        const examples = form.watch(`examples.${language}`);
+                        const examplesArray = Array.isArray(examples) ? examples : [];
+                        return examplesArray.map((_, exampleIndex) => (
+                          <div key={exampleIndex} className="border rounded-lg">
+                            <div
+                              className="p-4 flex justify-between items-center cursor-pointer"
+                              onClick={() => toggleExample(language, exampleIndex)}
+                            >
+                              <Label>Example {exampleIndex + 1}</Label>
+                              <div className="flex items-center gap-2">
+                                {/* Only show remove button if there is more than one example */}
+                                {examplesArray.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // Prevent toggling example visibility
+                                      removeExample(language, exampleIndex);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                >
+                                  {openExamples[`${language}-${exampleIndex}`] ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            {openExamples[`${language}-${exampleIndex}`] && (
+                              <div className="p-4 space-y-4 border-t">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name={`examples.${language}.${exampleIndex}.input`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Input</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="Enter input" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <FormField
+                                    control={form.control}
+                                    name={`examples.${language}.${exampleIndex}.output`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Output</FormLabel>
+                                        <FormControl>
+                                          <Input placeholder="Enter output" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                                <FormField
+                                  control={form.control}
+                                  name={`examples.${language}.${exampleIndex}.explanation`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Explanation</FormLabel>
+                                      <FormControl>
+                                        <Textarea placeholder="Enter explanation" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
                             )}
-                          />
-                           <FormField
-                            control={form.control}
-                            name={`examples.${language}.output`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input placeholder="Output" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                       </div>
-                       <FormField
-                          control={form.control}
-                          name={`examples.${language}.explanation`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Textarea placeholder="Explanation" {...field} />
-                              </FormControl>
-                               <FormMessage />
-                            </FormItem>
-                          )}
-                       />
+                          </div>
+                        ));
+                      })()}
                     </div>
 
                     <FormField
@@ -593,29 +1030,31 @@ const AddProblem = () => {
                       )}
                     />
 
-                     <FormField
+                    <FormField
                       control={form.control}
                       name={`reference_solution.${language}`}
                       render={({ field }) => (
-                         <FormItem className="space-y-2">
-                           <FormLabel>Reference Solution ({language})</FormLabel>
-                           <FormControl>
-                             <Editor
-                               height="200px"
-                               defaultLanguage={language.toLowerCase()}
-                               value={field.value || ''}
-                               onChange={field.onChange}
-                               theme="vs-dark"
-                               options={{
-                                 minimap: { enabled: false },
-                                 scrollBeyondLastLine: false
-                               }}
-                             />
-                           </FormControl>
-                            <FormMessage />
-                         </FormItem>
-                       )}
-                     />
+                        <FormItem className="space-y-2">
+                          <FormLabel>Reference Solution ({language})</FormLabel>
+                          <FormControl>
+                            <Editor
+                              height="200px"
+                              defaultLanguage={language.toLowerCase()}
+                              value={field.value || ''}
+                              onChange={(value) => {
+                                field.onChange(value || '');
+                              }}
+                              theme="vs-dark"
+                              options={{
+                                minimap: { enabled: false },
+                                scrollBeyondLastLine: false
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 ))}
               </div>
@@ -626,6 +1065,11 @@ const AddProblem = () => {
                 type="submit"
                 disabled={isCreating}
                 className="w-full"
+                onClick={() => {
+                  console.log('Submit button clicked');
+                  console.log('Form values:', form.getValues());
+                  console.log('Selected companies:', selectedCompanies);
+                }}
               >
                 {isCreating ? 'Creating...' : 'Create Problem'}
               </Button>

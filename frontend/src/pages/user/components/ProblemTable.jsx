@@ -9,9 +9,22 @@ const ProblemTable = ({ problems }) => {
   const navigate = useNavigate();
   const [companyMap, setCompanyMap] = useState({}); // { [companyId]: { name, url } }
 
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 'bg-green-500/10 text-green-500';
+      case 'medium':
+        return 'bg-yellow-500/10 text-yellow-500';
+      case 'hard':
+        return 'bg-red-500/10 text-red-500';
+      default:
+        return 'bg-gray-500/10 text-gray-500';
+    }
+  };
+
   useEffect(() => {
     // Get unique companyIds from problems
-    const companyIds = Array.from(new Set(problems.map(p => p.companyId).filter(Boolean)));
+    const companyIds = Array.from(new Set(problems.flatMap(p => p.companies || []).filter(Boolean)));
     // Only fetch if not already in companyMap
     companyIds.forEach(async (companyId) => {
       if (!companyMap[companyId]) {
@@ -49,37 +62,62 @@ const ProblemTable = ({ problems }) => {
         </TableHeader>
         <TableBody>
           {problems.map((problem, idx) => {
-            const company = problem.companyId ? companyMap[problem.companyId] : null;
+            const companies = problem.companies || [];
+            const firstCompanyId = companies[0];
+            const firstCompany = firstCompanyId ? companyMap[firstCompanyId] : null;
+            const additionalCompanies = companies.length - 1;
+
+            // Handle tags display
+            const visibleTags = problem.tags?.slice(0, 2) || [];
+            const additionalTags = (problem.tags?.length || 0) - 2;
+
             return (
               <TableRow key={problem.id}>
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{problem.title}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={`capitalize ${problem.difficulty}`}>{problem.difficulty}</Badge>
+                  <Badge className={getDifficultyColor(problem.difficulty)}>
+                    {problem.difficulty}
+                  </Badge>
                 </TableCell>
                 <TableCell>
-                  {company ? (
-                    <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1 text-sm font-mediu">
-                      {company.url && (
-                        <img
-                          src={company.url}
-                          alt={company.name}
-                          style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "cover" }}
-                        />
-                      )}
-                      <span className="ml-1 truncate" style={{maxWidth: 80}}>{company.name}</span>
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">None</Badge>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {firstCompany ? (
+                      <Badge variant="secondary" className="flex items-center gap-2 text-sm font-mediu">
+                        {firstCompany.url && (
+                          <img
+                            src={firstCompany.url}
+                            alt={firstCompany.name}
+                            style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "cover" }}
+                          />
+                        )}
+                        <span className="ml-1 truncate" style={{maxWidth: 80}}>{firstCompany.name}</span>
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">None</Badge>
+                    )}
+                    {additionalCompanies > 0 && (
+                      <Badge variant="secondary" className="text-xs">+{additionalCompanies}</Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {problem.tags.map(tag => (
-                    <Badge key={tag} className="mr-1">{tag}</Badge>
-                  ))}
+                  <div className="flex items-center gap-1">
+                    {visibleTags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-sm">{tag}</Badge>
+                    ))}
+                    {additionalTags > 0 && (
+                      <Badge variant="secondary" className="text-xs">+{additionalTags}</Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Button onClick={() => navigate(`/problem/${problem.id}`)}>Solve</Button>
+                  <Button 
+                    className="bg-green-600 rounded-lg text-white cursor-pointer" 
+                    onClick={() => navigate(`/problem/${problem.id}`)}
+                  >
+                    Solve
+                  </Button>
                 </TableCell>
               </TableRow>
             );

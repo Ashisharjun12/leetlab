@@ -49,6 +49,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { companyAPI } from '@/api/api'
 
 const ITEMS_PER_PAGE = 5;
 
@@ -58,7 +60,7 @@ const AllProblems = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [problemToDelete, setProblemToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [companies, setCompanies] = useState({});
+  const [companiesMap, setCompaniesMap] = useState({});
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [selectedTags, setSelectedTags] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
@@ -68,16 +70,18 @@ const AllProblems = () => {
     getAllProblems();
   }, [getAllProblems]);
 
-  // Fetch companies
+  // Fetch companies and store in a map for easy lookup
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/v1/company');
+        const response = await companyAPI.getAllCompanies();
         const companiesMap = {};
-        response.data.data.forEach(company => {
-          companiesMap[company.id] = company.name;
-        });
-        setCompanies(companiesMap);
+        if (response.data && Array.isArray(response.data.data)) {
+          response.data.data.forEach(company => {
+            companiesMap[company.id] = company;
+          });
+        }
+        setCompaniesMap(companiesMap);
       } catch (error) {
         console.error('Error fetching companies:', error);
       }
@@ -126,18 +130,49 @@ const AllProblems = () => {
     }
   };
 
-  const getCompanyBadge = (companyId) => {
-    if (!companyId || !companies[companyId]) {
+  const renderCompanyInfo = (companyIds) => {
+    if (!companyIds || !Array.isArray(companyIds) || companyIds.length === 0) {
       return (
         <Badge variant="secondary" className="bg-gray-500/10 text-gray-500">
           None
         </Badge>
       );
     }
+
+    // Select a random company ID from the array
+    const randomIndex = Math.floor(Math.random() * companyIds.length);
+    const randomCompanyId = companyIds[randomIndex];
+    const selectedCompany = companiesMap[randomCompanyId];
+
+    if (!selectedCompany) {
+       return (
+        <Badge variant="secondary" className="bg-gray-500/10 text-gray-500">
+          Unknown Company
+        </Badge>
+      );
+    }
+
+    const additionalCompaniesCount = companyIds.length - 1;
+
     return (
-      <Badge className="bg-blue-500/10 text-blue-500">
-        {companies[companyId]}
-      </Badge>
+      <div className="flex items-center gap-1">
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Avatar className="h-4 w-4">
+             {selectedCompany.companyUrl?.url ? (
+               <AvatarImage src={selectedCompany.companyUrl.url.url} alt={selectedCompany.name} />
+             ) : (
+               <AvatarFallback className="text-[8px]">{selectedCompany.name.charAt(0)}</AvatarFallback>
+             )}
+           </Avatar>
+           <span>{selectedCompany.name}</span>
+           
+        </Badge>
+         {additionalCompaniesCount > 0 && (
+           <Badge variant="secondary" className="ml-1">
+             +{additionalCompaniesCount}
+           </Badge>
+         )}
+      </div>
     );
   };
 
@@ -403,7 +438,7 @@ const AllProblems = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {getCompanyBadge(problem.companyId)}
+                        {renderCompanyInfo(problem.companies)}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2 flex-wrap">

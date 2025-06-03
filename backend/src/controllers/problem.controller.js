@@ -25,9 +25,12 @@ export const createProblem = async (req, res) => {
       examples,
       codeSnippets,
       reference_solution,
-      companyId
-      
+      companyIds,
+      hints,
+      problemImage
     } = req.body;
+
+    console.log('Received companyIds:', companyIds);
 
     if (req.user.role !== "admin") {
       return res.status(403).json({
@@ -36,23 +39,33 @@ export const createProblem = async (req, res) => {
       });
     }
 
-  
+    // Validate companyIds if provided
+    if (companyIds && companyIds.length > 0) {
+      try {
+        // Get all companies
+        const allCompanies = await db.select().from(Company);
+        console.log('All companies:', allCompanies);
 
-    // Validate companyId if provided
-    if (companyId) {
-      logger.info(`Validating company ID: ${companyId}`);
-      const [company] = await db
-        .select()
-        .from(Company)
-        .where(eq(Company.id, companyId));
+        // Filter companies that match the provided IDs
+        const validCompanies = allCompanies.filter(company => 
+          companyIds.includes(company.id)
+        );
+        console.log('Valid companies:', validCompanies);
 
-      if (!company) {
+        if (validCompanies.length !== companyIds.length) {
+          return res.status(400).json({
+            success: false,
+            message: "One or more company IDs are invalid",
+          });
+        }
+      } catch (error) {
+        console.error('Error validating companies:', error);
         return res.status(400).json({
           success: false,
-          message: "Invalid company ID provided",
+          message: "Error validating company IDs",
+          error: error.message
         });
       }
-      logger.info(`Company found: ${company.name}`);
     }
 
     // Ensure tags and constraints are arrays
@@ -74,45 +87,70 @@ export const createProblem = async (req, res) => {
           .filter((c) => c)
       : [];
 
-    try {
-      for (const [language, solutionCode] of Object.entries(
-        reference_solution
-      )) {
-        const languageId = getJudge0LanguageId(language);
+    // Ensure hints is an array
+    const processedHints = Array.isArray(hints)
+      ? hints
+      : typeof hints === "string"
+        ? hints.split(",").map(h => h.trim()).filter(h => h)
+        : [];
 
-        if (!languageId) {
-          return res
-            .status(400)
-            .json({ message: `Language ${language} not supported..` });
+    // Process examples to ensure they are arrays
+    const processedExamples = {};
+    if (examples) {
+      Object.entries(examples).forEach(([language, langExamples]) => {
+        processedExamples[language] = Array.isArray(langExamples) 
+          ? langExamples 
+          : [langExamples];
+      });
+    }
+
+    // Process reference solutions to ensure they are strings
+    const processedReferenceSolutions = {};
+    if (reference_solution) {
+      Object.entries(reference_solution).forEach(([language, solution]) => {
+        // Store as a single string solution per language
+        if (typeof solution === 'string' && solution.trim() !== '') {
+          processedReferenceSolutions[language] = solution;
         }
+      });
+    }
 
-        //testcases
-        const submissions = testCases.map(({ input, output }) => ({
-          source_code: solutionCode,
-          language_id: languageId,
-          stdin: input,
-          expected_output: output,
-        }));
+    try {
+      // Validate reference solutions if provided
+      if (Object.keys(processedReferenceSolutions).length > 0) {
+        for (const [language, solutionCode] of Object.entries(processedReferenceSolutions)) {
+          const languageId = getJudge0LanguageId(language);
 
-        const submissionResults = await submitBatch(submissions);
+          if (!languageId) {
+            return res
+              .status(400)
+              .json({ message: `Language ${language} not supported..` });
+          }
 
-        const tokens = submissionResults.map((res) => res.token);
+          // Test solution against test cases
+          const submissions = testCases.map(({ input, output }) => ({
+            source_code: solutionCode,
+            language_id: languageId,
+            stdin: input,
+            expected_output: output,
+          }));
 
-        const results = await pollbatchResults(tokens);
+          const submissionResults = await submitBatch(submissions);
+          const tokens = submissionResults.map((res) => res.token);
+          const results = await pollbatchResults(tokens);
 
-        for (let i = 0; i < results.length; i++) {
-          const result = results[i];
-          console.log("result........", result);
-
-          if (result.status.id !== 3) {
-            return res.status(400).json({
-              error: `TestCase ${i + 1} failed for language ${language}`,
-            });
+          for (let i = 0; i < results.length; i++) {
+            const result = results[i];
+            if (result.status.id !== 3) {
+              return res.status(400).json({
+                error: `TestCase ${i + 1} failed for language ${language}`,
+              });
+            }
           }
         }
       }
 
-      // Create problem with companyId
+      // Create problem with companyIds and problemImage
       const [newProblem] = await db
         .insert(problem)
         .values({
@@ -122,37 +160,39 @@ export const createProblem = async (req, res) => {
           constraints: processedConstraints,
           testCases,
           tags: processedTags,
-          example: examples,
+          example: processedExamples,
           codeSnippets,
-          reference_solution: JSON.stringify(reference_solution),
+          reference_solution: processedReferenceSolutions,
           userId: req.user.id,
-          companyId: companyId || null,
+          companies: companyIds || [],
+          problemImage: problemImage || null,
+          hints: processedHints,
         })
         .returning();
 
-      // If companyId is provided, get company details
-      let companyDetails = null;
-      if (companyId) {
-        const [company] = await db
-          .select()
-          .from(Company)
-          .where(eq(Company.id, companyId));
-        companyDetails = company;
-      }
+      console.log('Created problem:', newProblem);
+
+      // Get company details for the response
+      const allCompanies = await db.select().from(Company);
+      const companyDetails = allCompanies.filter(company => 
+        newProblem.companies.includes(company.id)
+      );
+      console.log('Company details for response:', companyDetails);
 
       res.status(201).json({
         success: true,
         message: "Problem created successfully",
         data: {
           ...newProblem,
-          company: companyDetails ? {
-            id: companyDetails.id,
-            name: companyDetails.name
-          } : null
+          companies: companyDetails.map(company => ({
+            id: company.id,
+            name: company.name,
+            companyUrl: company.companyUrl
+          }))
         }
       });
     } catch (error) {
-      logger.error("Error during problem creation logic:", error);
+      console.error('Error creating problem:', error);
       return res.status(500).json({
         success: false,
         message: "Internal server error during problem creation.",
@@ -160,7 +200,7 @@ export const createProblem = async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error("Create problem error:", error);
+    console.error('Create problem error:', error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -266,7 +306,8 @@ export const updateProblemById = async (req, res) => {
       examples,
       codeSnippets,
       reference_solution,
-      companyId
+      companyId,
+      hints
     } = req.body;
 
     if (req.user.role !== "admin") {
@@ -324,6 +365,13 @@ export const updateProblemById = async (req, res) => {
           .filter((c) => c)
       : existingProblem.constraints;
 
+    // Ensure hints is an array
+    const processedHints = Array.isArray(hints)
+      ? hints
+      : typeof hints === "string"
+        ? hints.split(",").map(h => h.trim()).filter(h => h)
+        : [];
+
     try {
       // Validate reference solution if provided
       if (reference_solution) {
@@ -377,6 +425,7 @@ export const updateProblemById = async (req, res) => {
             ? JSON.stringify(reference_solution)
             : existingProblem.reference_solution,
           companyId:existingProblem.companyId, 
+          hints: processedHints,
         })
         .where(eq(problem.id, id))
         .returning();

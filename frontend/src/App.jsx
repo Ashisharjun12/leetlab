@@ -18,6 +18,7 @@ import EditProblem from './pages/admin/pages/EditProblem'
 import ProtectedRoute from './pages/user/routes/ProtectedRoute'
 import Interview from './pages/user/pages/Interview'
 import ProblemSet from './pages/user/pages/ProblemSet'
+import ProblemDetailsPage from './pages/user/pages/ProblemDetailsPage'
 
 
 const App = () => {
@@ -50,8 +51,9 @@ const App = () => {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path='/problem-set' element={<ProblemSet />} />
+              <Route path='/problem/:problemId' element={<ProblemDetailsPage />} />
               {/* <Route path='/playlist/:playlistId' element={<PlaylistDetails />} />
-              <Route path='/problem/:problemId' element={<ProblemDetailsPage />} /> */}
+               */}
               <Route path='/interview' element={<Interview />} />
             </Route>
           </Route>
