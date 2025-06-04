@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp} from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp,  integer} from "drizzle-orm/pg-core";
 import { user } from "./user.model.js";
 import { problem } from "./problem.model.js";
 import { relations } from "drizzle-orm";
@@ -10,6 +10,7 @@ export const submission = pgTable("submission", {
     userId: uuid('user_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
     problemId: uuid('problem_id').references(() => problem.id, { onDelete: 'cascade' }).notNull(),
     sourceCode: text('source_code').notNull(),
+    languageId:integer("languageId").default(0),
     stdIn: text('std_in'),  
     stdOut: text('std_out'),
     stdErr: text('std_err'),

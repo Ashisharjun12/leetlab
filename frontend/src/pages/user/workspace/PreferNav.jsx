@@ -1,8 +1,9 @@
 import React from 'react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Code, ChevronDown, CodeXml } from 'lucide-react';
 
-const PreferNav = ({ selectedLanguage, onLanguageChange, availableLanguages, onFormatCode }) => {
+const PreferNav = ({ selectedLanguage, onLanguageChange, availableLanguages, onFormatCode, onRun, onSubmit, onUploadImage, isLoading }) => {
     return (
         <div className="h-10 border-b border-border flex items-center justify-between px-2 text-sm">
             {/* Left Section: Code Title, Icon, and Language Selector */}
@@ -32,13 +33,24 @@ const PreferNav = ({ selectedLanguage, onLanguageChange, availableLanguages, onF
                 </div>
             </div>
 
-            {/* Right Section: Format Code Icon */}
+            {/* Right Section: Format Code Icon and Action Buttons */}
             <div className="flex items-center gap-2 text-muted-foreground">
                 {/* Format Code Icon */}
                  <CodeXml
                     className="h-4 w-4 cursor-pointer hover:text-primary"
                     onClick={onFormatCode} 
                   />
+
+    
+                {/* Run Button */}
+                <Button variant="secondary" size="sm" onClick={onRun} className="cursor-pointer" disabled={isLoading}>
+                    Run
+                </Button>
+
+                {/* Submit Button */}
+                <Button variant="primary" size="sm" onClick={onSubmit} className="cursor-pointer bg-green-500 text-white" disabled={isLoading}>
+                    Submit
+                </Button>
             </div>
         </div>
     );

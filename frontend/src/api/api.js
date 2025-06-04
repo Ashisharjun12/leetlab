@@ -81,5 +81,5 @@ export const submissionAPI = {
 // Execute Code API endpoint
 export const executeAPI = {
   executeCode: (data) => axiosInstance.post('/execute-code', data),
+  createSubmission:(problemId , data)=>axiosInstance.post(`/execute-code/${problemId}/submission`,data)
 }
-

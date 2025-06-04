@@ -42,7 +42,7 @@ export const getSubmissionsForProblem = async (req, res) => {
 
     return res.status(200).json({
       message: "Submissions fetched successfully",
-      data: submissionData,
+      data: [submissionData],
     });
   } catch (error) {
     logger.error(error);
@@ -57,7 +57,7 @@ export const getAllTheSubmissionsForProblem = async (req, res) => {
   try {
     logger.info("Getting all submissions for problem");
     const problemId = req.params.problemId;
-    const [submissionData] = await db
+    const submissionData = await db
       .select()
       .from(submission)
       .where(eq(submission.problemId, problemId));

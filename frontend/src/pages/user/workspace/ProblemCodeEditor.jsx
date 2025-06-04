@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 
-// Accept editorRef prop to expose the editor instance
-const ProblemCodeEditor = ({ problem, selectedLanguage, editorRef }) => {
+
+// Accept editorRef, isLoading, onLanguageChange, and availableLanguages props
+const ProblemCodeEditor = ({ problem, selectedLanguage, editorRef, isLoading, onLanguageChange, availableLanguages }) => {
   const [code, setCode] = useState('');
   const [isEditorReady, setIsEditorReady] = useState(false);
 
@@ -34,21 +35,23 @@ const ProblemCodeEditor = ({ problem, selectedLanguage, editorRef }) => {
   const editorLanguage = selectedLanguage.toLowerCase() === 'javascript' ? 'javascript' : selectedLanguage.toLowerCase() || 'plaintext';
 
   return (
-    <div className="h-full w-full">
-       <Editor
-        height="100%"
-        language={editorLanguage}
-        theme="vs-dark" // Or your preferred dark theme
-        value={code} // Use local state for value, but update via ref when snippet changes
-        onChange={setCode} // Update local state on change
-        onMount={handleEditorDidMount} // Capture editor instance
-        options={{
-          minimap: { enabled: false },
-          // scrollbar: { vertical: 'hidden' }, // Removed as requested
-          // Add other desired editor options here
-          automaticLayout: true, // Essential for fitting the editor to its container
-        }}
-      />
+    <div className="h-full flex flex-col">
+       <div className="flex-1 overflow-hidden">
+         
+          <Editor
+            height="100%"
+            language={editorLanguage}
+            theme="vs-dark" // Or your preferred dark theme
+            value={code} // Use local state for value, but update via ref when snippet changes
+            onChange={setCode} // Update local state on change
+            onMount={handleEditorDidMount} // Capture editor instance
+            options={{
+              minimap: { enabled: false },
+              automaticLayout: true,
+            }}
+          />
+       </div>
+        {/* Buttons section was moved to PreferNav */}
     </div>
   );
 };

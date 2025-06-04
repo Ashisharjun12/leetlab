@@ -9,9 +9,7 @@ import {
 } from "../services/judge0.js";
 import logger from "../utils/logger.js";
 import { eq, inArray, and } from "drizzle-orm";
-import { playlist } from "../models/playlist.model.js";
-import { problemInPlaylist } from "../models/problemInPlaylist.model.js";
-import { problem } from "../models/problem.model.js";
+
 
 // Map Judge0 status to our enum values
 const mapJudge0Status = (status) => {
@@ -27,221 +25,16 @@ const mapJudge0Status = (status) => {
   return statusMap[status] || 'pending';
 };
 
-export const createPlaylist = async (req, res) => {
+// Function to execute code and get results
+const executeCodeWithJudge0 = async (source_code, language_id, stdin, expected_outputs) => {
   try {
-    logger.info("Creating playlist");
-    const { name, description } = req.body;
-    const userId = req.user.id;
-
-    const [playlistData] = await db
-      .insert(playlist)
-      .values({
-        name,
-        description,
-        userId,
-      })
-      .returning();
-
-    res.status(201).json({
-      success: true,
-      message: "Playlist created successfully",
-      playlist: playlistData,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-export const getPlayAllListDetails = async (req, res) => {
-  try {
-    logger.info("Getting all playlist details");
-
-    const playlistDetails = await db.select().from(playlist);
-
-    if (!playlistDetails) {
-      return res.status(404).json({
-        success: false,
-        message: "Playlist not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Playlist details fetched successfully",
-      playlist: playlistDetails,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-export const getPlayListDetails = async (req, res) => {
-  try {
-    logger.info("Getting playlist details");
-
-    const { playlistId } = req.params;
-
-    const [playlistDetails] = await db
-      .select()
-      .from(playlist)
-      .where(eq(playlist.id, playlistId));
-
-    if (!playlistDetails) {
-      return res.status(404).json({
-        success: false,
-        message: "Playlist not found",
-      });
-    }
-
-    // Get problems in the playlist
-    const problemsInPlaylist = await db
-      .select({
-        problem: problem,
-      })
-      .from(problemInPlaylist)
-      .innerJoin(problem, eq(problemInPlaylist.problemId, problem.id))
-      .where(eq(problemInPlaylist.playlistId, playlistId));
-
-    const problems = problemsInPlaylist.map(item => item.problem);
-
-    res.status(200).json({
-      success: true,
-      message: "Playlist details fetched successfully",
-      playlist: {
-        ...playlistDetails,
-        problems,
-      },
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-export const addProblemToPlaylist = async (req, res) => {
-  try {
-    logger.info("Adding problem to playlist");
-    const { playlistId } = req.params;
-    const { problemIds } = req.body; // array of problme ids
-
-    if (!Array.isArray(problemIds) || problemIds.length === 0) {
-      return res.status(400).json({ error: "Invalid or missing problemIds" });
-    }
-
-    const insertedProblems = await db.insert(problemInPlaylist).values(
-      problemIds.map((problemId) => ({
-        playlistId,
-        problemId,
-      }))
-    ).returning();
-
-    res.status(200).json({
-      success: true,
-      message: "Problems added to playlist successfully",
-      problemInPlaylist: insertedProblems,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-export const deletePlayList = async (req, res) => {
-  try {
-    logger.info("Deleting playlist");
-    const { playlistId } = req.params;
-
-    const [playlistData] = await db
-      .delete(playlist)
-      .where(eq(playlist.id, playlistId)).returning();
-
-    if (!playlistData) {
-      return res.status(404).json({ error: "Playlist not found" });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Playlist deleted successfully",
-      playlist: playlistData,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-export const removeProblemFromPlaylist = async (req, res) => {
-  try {
-    logger.info("Removing problem from playlist");
-    const { playlistId } = req.params;
-    const { problemIds } = req.body;
-
-    if (!Array.isArray(problemIds) || problemIds.length === 0) {
-      return res.status(400).json({ error: "Invalid or missing problemIds" });
-    }
-
-    const removedProblems = await db
-      .delete(problemInPlaylist)
-      .where(
-        and(
-          eq(problemInPlaylist.playlistId, playlistId),
-          inArray(problemInPlaylist.problemId, problemIds)
-        )
-      ).returning();
-
-    res.status(200).json({
-      success: true,
-      message: "Problem removed from playlist successfully",
-      problemInPlaylist: removedProblems,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-
-export const executeCode = async (req, res) => {
-  try {
-    logger.info("Executing code");
-    const { source_code, language_id, stdin, expected_outputs, problemId } =
-      req.body;
-
-    const userId = req.user.id;
-
     //validate test case
     if (
       !Array.isArray(stdin) ||
       !Array.isArray(expected_outputs) ||
       stdin.length !== expected_outputs.length
     ) {
-      logger.error("Invalid test case data received");
-      return res.status(400).json({ message: "Invalid test case" });
+      throw new Error("Invalid test case");
     }
 
     //prepare each test case for judge0 batch submission
@@ -256,6 +49,7 @@ export const executeCode = async (req, res) => {
 
     logger.info("Submitting batch to Judge0");
     logger.debug("Submission Data:", JSON.stringify(submissionData, null, 2));
+    
     //submit to judge0
     const submissionResponse = await submitBatch(submissionData);
     logger.info("Received submission response from Judge0");
@@ -265,21 +59,18 @@ export const executeCode = async (req, res) => {
 
     logger.info("Polling results from Judge0");
     logger.debug("Tokens:", tokens);
+    
     //poll results from judge0
     const results = await pollbatchResults(tokens);
     logger.info("Received results from Judge0");
     logger.debug("Results:", JSON.stringify(results, null, 2));
 
-    console.log("results execution", results);
-
     //analyse results
     let AllPassed = true;
     const detailedResults = results.map((result, index) => {
       const stdOut = result.stdout?.trim();
-      const expectedOutput = expected_outputs[index]?.trim(); // Add nullish coalescing for safety
+      const expectedOutput = expected_outputs[index]?.trim();
       const passed = stdOut === expectedOutput;
-
-      console.log(`Test case ${index + 1}: ${passed ? "Passed" : "Failed"}`);
 
       if (!passed) {
         AllPassed = false;
@@ -288,8 +79,8 @@ export const executeCode = async (req, res) => {
       return {
         testCase: index + 1,
         passed,
-        expectedOut: expectedOutput, // Use expectedOut to match frontend
-        stdOut: stdOut, // Use stdOut to match frontend
+        expectedOut: expectedOutput,
+        stdOut: stdOut,
         stderr: result.stderr || null,
         compileOut: result.compile_output || null,
         status: mapJudge0Status(result.status.description),
@@ -299,35 +90,49 @@ export const executeCode = async (req, res) => {
       };
     });
 
-    console.log("detailed results", detailedResults);
+    return {
+      allPassed: AllPassed,
+      detailedResults
+    };
+  } catch (error) {
+    logger.error("Error executing code:", error);
+    throw error;
+  }
+};
 
-    // Create submission first
+// Function to create submission and test case results
+const createSubmission = async (userId, problemId, source_code, stdin, executionResults, languageId) => {
+  try {
+    const { allPassed, detailedResults } = executionResults;
+
+    // Create submission
     const [newSubmission] = await db
       .insert(submission)
       .values({
         userId,
         problemId,
         sourceCode: source_code,
-        stdIn: JSON.stringify(stdin), // Store stdin as JSON string
-        stdOut: JSON.stringify(detailedResults.map((r) => r.stdOut)), // Use r.stdOut here
+        stdIn: JSON.stringify(stdin),
+        stdOut: JSON.stringify(detailedResults.map((r) => r.stdOut)),
         stdErr: detailedResults.some((r) => r.stderr)
           ? JSON.stringify(detailedResults.map((r) => r.stderr))
           : null,
         compileOut: detailedResults.some((r) => r.compileOut)
           ? JSON.stringify(detailedResults.map((r) => r.compileOut))
           : null,
-        status: AllPassed ? "accepted" : "wrong_answer",
+        status: allPassed ? "accepted" : "wrong_answer",
         memory: detailedResults.some((r) => r.memory)
           ? JSON.stringify(detailedResults.map((r) => r.memory))
           : null,
         time: detailedResults.some((r) => r.time)
           ? JSON.stringify(detailedResults.map((r) => r.time))
           : null,
+        languageId: languageId,
       })
       .returning();
 
-    //if all passed then user problem solved
-    if (AllPassed) {
+    // If all passed then mark problem as solved
+    if (allPassed) {
       await db
         .insert(problemSolved)
         .values({
@@ -339,14 +144,13 @@ export const executeCode = async (req, res) => {
         });
     }
 
-    //save individual test cases results
-    // Ensure testCaseResult has correct column names matching the detailedResults keys
+    // Save individual test cases results
     const testCaseResultsForDb = detailedResults.map((r) => ({
       submissionId: newSubmission.id,
       testCase: r.testCase,
       passed: r.passed,
-      stdOut: r.stdOut, // Use r.stdOut here
-      expectedOut: r.expectedOut, // Use r.expectedOut here
+      stdOut: r.stdOut,
+      expectedOut: r.expectedOut,
       stdErr: r.stderr,
       compileOut: r.compileOut,
       status: r.status,
@@ -356,28 +160,49 @@ export const executeCode = async (req, res) => {
 
     await db.insert(testCaseResult).values(testCaseResultsForDb);
 
-    // Fetch the submission with its related test case results for the frontend
+    // Fetch the submission with its related test case results
     const submissionWithTestCases = await db
       .select()
       .from(submission)
       .leftJoin(testCaseResult, eq(submission.id, testCaseResult.submissionId))
       .where(eq(submission.id, newSubmission.id))
-      .orderBy(testCaseResult.testCase); // Order by test case number
+      .orderBy(testCaseResult.testCase);
 
-    // Structure the response to match the frontend's expectation
-    const formattedSubmission = { // Assuming frontend expects a single submission object with a testCaseResult array
-      ...submissionWithTestCases[0].submission, // Extract submission details
-      testCaseResult: submissionWithTestCases.map(item => item.test_case_result).filter(Boolean) // Extract test results
+    // Structure the response
+    const formattedSubmission = {
+      ...submissionWithTestCases[0].submission,
+      testCaseResult: submissionWithTestCases.map(item => item.test_case_result).filter(Boolean)
+    };
+
+    return formattedSubmission;
+  } catch (error) {
+    logger.error("Error creating submission:", error);
+    throw error;
+  }
+};
+
+// Main controller function - only executes code
+export const executeCode = async (req, res) => {
+  try {
+    logger.info("Executing code");
+    const { source_code, language_id, stdin, expected_outputs } = req.body;
+
+    // Execute code and get results
+    const executionResults = await executeCodeWithJudge0(source_code, language_id, stdin, expected_outputs);
+
+    // Add language_id to the response data
+    const responseData = {
+        ...executionResults,
+        language_id: language_id 
     };
 
     return res.status(200).json({
       success: true,
       message: "Code executed successfully",
-      submissions: [formattedSubmission], // Wrap in an array to match frontend structure output?.submissions?.[0]
+      data: responseData // Return the data with language_id
     });
   } catch (error) {
-    logger.error("Error executing code:", error);
-    // Log specific error details if available
+    logger.error("Error in executeCode controller:", error);
     if (error.response) {
       logger.error("Error response data:", error.response.data);
       logger.error("Error response status:", error.response.status);
@@ -387,6 +212,56 @@ export const executeCode = async (req, res) => {
     } else {
       logger.error("Error message:", error.message);
     }
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error" 
+    });
+  }
+};
+
+// Controller for creating submission for executed code
+export const createSubmissionForExecutedCode = async (req, res) => {
+  try {
+    logger.info("Creating submission for executed code");
+    console.log("Received request body for submission:", req.body);
+    const { problemId } = req.params;
+    const { source_code, language_id, stdin, expected_outputs } = req.body;
+    const userId = req.user.id;
+
+    // First execute the code
+    const executionResults = await executeCodeWithJudge0(source_code, language_id, stdin, expected_outputs);
+
+    // Create submission with results
+    const formattedSubmission = await createSubmission(
+      userId,
+      problemId,
+      source_code,
+      stdin,
+      executionResults,
+      language_id
+    );
+
+    console.log("submited data",formattedSubmission)
+
+    return res.status(200).json({
+      success: true,
+      message: "Submission created successfully",
+      submissions: [formattedSubmission],
+    });
+  } catch (error) {
+    logger.error("Error creating submission for executed code:", error);
+    if (error.response) {
+      logger.error("Error response data:", error.response.data);
+      logger.error("Error response status:", error.response.status);
+      logger.error("Error response headers:", error.response.headers);
+    } else if (error.request) {
+      logger.error("Error request:", error.request);
+    } else {
+      logger.error("Error message:", error.message);
+    }
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error" 
+    });
   }
 };

@@ -1,21 +1,9 @@
-DO $$ BEGIN
-    CREATE TYPE "public"."problemdifficulty" AS ENUM('easy', 'medium', 'hard');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
-    CREATE TYPE "public"."status" AS ENUM('pending', 'accepted', 'wrong_answer', 'time_limit_exceeded', 'memory_limit_exceeded', 'runtime_error', 'compilation_error', 'internal_error');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
-    CREATE TYPE "public"."user_role" AS ENUM('user', 'admin');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
+DROP TYPE IF EXISTS "public"."problemdifficulty" CASCADE;--> statement-breakpoint
+DROP TYPE IF EXISTS "public"."status" CASCADE;--> statement-breakpoint
+DROP TYPE IF EXISTS "public"."user_role" CASCADE;--> statement-breakpoint
+CREATE TYPE "public"."problemdifficulty" AS ENUM('easy', 'medium', 'hard');--> statement-breakpoint
+CREATE TYPE "public"."status" AS ENUM('pending', 'accepted', 'wrong_answer', 'time_limit_exceeded', 'memory_limit_exceeded', 'runtime_error', 'compilation_error', 'internal_error');--> statement-breakpoint
+CREATE TYPE "public"."user_role" AS ENUM('user', 'admin');--> statement-breakpoint
 CREATE TABLE "comment" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"discussion_id" uuid NOT NULL,
@@ -44,6 +32,15 @@ CREATE TABLE "discussion" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+CREATE TABLE "editorial" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"video_url" jsonb,
+	"problem_id" uuid,
+	"user_id" uuid,
+	"solution_content" jsonb NOT NULL,
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
 CREATE TABLE "playlist" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
@@ -57,19 +54,19 @@ CREATE TABLE "problem" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"title" text NOT NULL,
-	"companies" jsonb,
+	"companies" jsonb DEFAULT '[]'::jsonb,
 	"description" text NOT NULL,
 	"problem_difficulty" "problemdifficulty" DEFAULT 'easy' NOT NULL,
 	"problem_image" jsonb,
-	"tags" text[] NOT NULL,
-	"example" jsonb NOT NULL,
-	"constraints" text[] NOT NULL,
-	"hints" jsonb,
+	"tags" text[] DEFAULT '{}',
+	"example" jsonb DEFAULT '{}'::jsonb,
+	"constraints" text[] DEFAULT '{}',
+	"hints" jsonb DEFAULT '[]'::jsonb,
 	"editorial" jsonb,
-	"test_cases" jsonb NOT NULL,
-	"submissions" text[],
-	"code_snippets" jsonb NOT NULL,
-	"reference_solution" jsonb,
+	"test_cases" jsonb DEFAULT '[]'::jsonb,
+	"submissions" text[] DEFAULT '{}',
+	"code_snippets" jsonb DEFAULT '{}'::jsonb,
+	"reference_solution" jsonb DEFAULT '{}'::jsonb,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -95,6 +92,7 @@ CREATE TABLE "submission" (
 	"user_id" uuid NOT NULL,
 	"problem_id" uuid NOT NULL,
 	"source_code" text NOT NULL,
+	"languageId" integer DEFAULT 0,
 	"std_in" text,
 	"std_out" text,
 	"std_err" text,
@@ -143,6 +141,8 @@ ALTER TABLE "comment" ADD CONSTRAINT "comment_user_id_users_id_fk" FOREIGN KEY (
 ALTER TABLE "comment" ADD CONSTRAINT "comment_parent_comment_id_comment_id_fk" FOREIGN KEY ("parent_comment_id") REFERENCES "public"."comment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "discussion" ADD CONSTRAINT "discussion_problem_id_problem_id_fk" FOREIGN KEY ("problem_id") REFERENCES "public"."problem"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "discussion" ADD CONSTRAINT "discussion_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "editorial" ADD CONSTRAINT "editorial_problem_id_problem_id_fk" FOREIGN KEY ("problem_id") REFERENCES "public"."problem"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "editorial" ADD CONSTRAINT "editorial_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "playlist" ADD CONSTRAINT "playlist_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "problem" ADD CONSTRAINT "problem_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "problem_in_playlist" ADD CONSTRAINT "problem_in_playlist_playlist_id_playlist_id_fk" FOREIGN KEY ("playlist_id") REFERENCES "public"."playlist"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

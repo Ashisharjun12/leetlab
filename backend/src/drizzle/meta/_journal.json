@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1748954795277,
-      "tag": "0000_little_dakota_north",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1748961175578,
-      "tag": "0001_noisy_mordo",
+      "when": 1749042056107,
+      "tag": "0000_magical_bromley",
       "breakpoints": true
     }
   ]

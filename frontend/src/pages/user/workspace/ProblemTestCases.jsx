@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import { ChevronRight, SquareCheck } from 'lucide-react';
+import ProblemTestResult from './ProblemTestResult';
 
-const ProblemTestCases = ({ problem }) => {
+const ProblemTestCases = ({ problem, runResults }) => {
   const [selectedTab, setSelectedTab] = useState('testcase');
   const [selectedCaseIndex, setSelectedCaseIndex] = useState(0);
+
+  React.useEffect(() => {
+    if (runResults) {
+      setSelectedTab('test-result');
+    }
+  }, [runResults]);
 
   if (!problem) {
     return <div className="text-muted-foreground p-4">Loading test cases...</div>;
@@ -93,10 +100,8 @@ const ProblemTestCases = ({ problem }) => {
       case 'test-result':
         return (
           <div className="p-4 h-full overflow-y-auto hide-scrollbar">
-            {/* Test Result Content */}
-            <div className="text-muted-foreground">Test execution results will be displayed here.</div>
-            {/* You would likely render the ProblemTestResult component here and pass runResults data */}
-            {/* <ProblemTestResult runResults={...} /> */}
+            {/* Render the ProblemTestResult component */}
+            <ProblemTestResult runResults={runResults} />
           </div>
         );
       default:

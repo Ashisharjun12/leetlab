@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Lightbulb, FileText, BookOpen, FlaskConical, History, MessageSquare } from 'lucide-react';
+import { Lightbulb, FileText, BookOpen, FlaskConical, History, MessageSquare, CheckCircle2 } from 'lucide-react';
 import CompanyBadge from '../components/CompanyBadge'; // Assuming CompanyBadge is in the same directory
 // Import new components for tabs
 import ProblemDiscussion from './ProblemDiscussion'; // Component for Discussion tab
 import ProblemReferenceSolution from './ProblemReferenceSolution'; // Component for Solution tab
 import ProblemSubmission from './ProblemSubmission'; // Component for Submissions tab
+import ProblemSubmissionResult from './ProblemSubmissionResult'; // Import the new component
 
 const getDifficultyColor = (difficulty) => {
   switch (difficulty?.toLowerCase()) {
@@ -21,10 +22,12 @@ const getDifficultyColor = (difficulty) => {
   }
 };
 
-const ProblemDescriptionPanel = ({ problem, selectedLanguage }) => {
+const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult: initialSubmissionResult }) => {
   const [selectedTab, setSelectedTab] = useState('description'); // State for tabs
   const [showHints, setShowHints] = useState(false); // State to show hints within description if clicked
   const hintsRef = useRef(null); // Ref for scrolling to hints
+  const [showSubmissionResultTab, setShowSubmissionResultTab] = useState(false); // State to control visibility of submission result tab
+  const [submissionResult, setSubmissionResult] = useState(initialSubmissionResult);
 
    // Scroll to hints section when showHints becomes true
    useEffect(() => {
@@ -46,6 +49,31 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage }) => {
     if (!showHints && hintsRef.current) {
       hintsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  // Function to close the submission result tab
+  const handleCloseSubmissionResultTab = () => {
+    setShowSubmissionResultTab(false);
+    setSelectedTab('description'); // Switch back to description tab
+    setSubmissionResult(null); // Clear the submission result when closing the tab
+  };
+
+  // Effect to show the submission result tab when submissionResult is received
+  useEffect(() => {
+    if (submissionResult) {
+      setShowSubmissionResultTab(true);
+      setSelectedTab('submission-result');
+    } else {
+      setShowSubmissionResultTab(false);
+      if (selectedTab === 'submission-result') {
+         setSelectedTab('description');
+      }
+    }
+  }, [submissionResult]);
+
+  // Function to handle submission selection
+  const handleSubmissionSelect = (submission) => {
+    setSubmissionResult(submission);
   };
 
   const renderTabContent = () => {
@@ -104,6 +132,20 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage }) => {
                        &bull; {c}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Problem Image */}
+            {problem.problemImage?.url && (
+              <div className="mb-4">
+                <div className="font-semibold mb-1">Snapsort:</div>
+                <div className="w-full overflow-hidden rounded-lg border border-border">
+                  <img 
+                    src={problem.problemImage.url} 
+                    alt="Problem illustration" 
+                    className="w-[90%] h-[45%] object-contain"
+                  />
                 </div>
               </div>
             )}
@@ -180,9 +222,16 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage }) => {
       case 'submissions':
         return (
              <div className="p-4 overflow-y-auto hide-scrollbar h-full">
-                 <ProblemSubmission problem={problem} /> {/* Render Submissions component */}
+                 <ProblemSubmission problem={problem} onSubmissionSelect={handleSubmissionSelect} /> {/* Render Submissions component and pass the select handler */}
              </div>
         );
+      case 'submission-result': // New tab case
+          return ( submissionResult &&
+               <div className="p-4 overflow-y-auto hide-scrollbar h-full">
+                  {/* Render Submission Result component */}
+                  <ProblemSubmissionResult submissionResult={submissionResult} problem={problem} />
+               </div>
+          );
       default:
         return <div className="p-4 overflow-y-auto hide-scrollbar h-full text-muted-foreground">Select a tab.</div>;
     }
@@ -228,8 +277,28 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage }) => {
           onClick={() => setSelectedTab('submissions')}
         >
           <History className="w-4 h-4" />
-          Submissions ({problem.submissions?.length || 0}) {/* Show submission count */}
+          Submissions
         </button>
+        {/* Conditionally render Submission Result tab */}
+        {showSubmissionResultTab && submissionResult && (
+            <button
+              className={`pb-2 text-sm font-medium flex items-center gap-1 ${selectedTab === 'submission-result' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setSelectedTab('submission-result')}
+            >
+               <CheckCircle2 className="w-4 h-4" /> {/* Icon for Accepted/Submission Result */}
+               {submissionResult.status === 'accepted' ? 'Accepted' : 'Submission Result'}
+               {/* Close button for the tab */}
+               <button
+                  className="ml-2 text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent changing tab when clicking close
+                    handleCloseSubmissionResultTab();
+                  }}
+               >
+                  &times;
+               </button>
+            </button>
+        )}
       </div>
 
       {/* Tab Content */}
