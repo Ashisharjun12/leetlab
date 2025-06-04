@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const getStatusColor = (status) => {

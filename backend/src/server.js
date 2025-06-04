@@ -14,6 +14,8 @@ import playlistRoute from "./routes/playlist.route.js"
 import companyRoute from "./routes/company.route.js"
 import adminRoute from "./routes/admin.route.js"
 import uploadRoute from "./routes/upload.route.js"
+import discussionRoute from "./routes/discussion.route.js"
+import editorialRoute from "./routes/editorial.route.js"
 const app = express();
 const PORT = _config.PORT;
 
@@ -40,6 +42,8 @@ app.use("/api/v1/submission",submissionRoute)
 app.use("/api/v1/playlist",playlistRoute)
 app.use("/api/v1/company",companyRoute)
 app.use('/api/v1/admin',adminRoute)
+app.use('/api/v1/discussion',discussionRoute)
+app.use('/api/v1/editorial',editorialRoute)
 
 // Error handler middleware placeholder
 app.use((err, req, res, next) => {

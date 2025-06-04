@@ -22,12 +22,11 @@ const getDifficultyColor = (difficulty) => {
   }
 };
 
-const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult: initialSubmissionResult }) => {
+// Accept submissionResult and onClearSubmissionResult props
+const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult, onClearSubmissionResult }) => {
   const [selectedTab, setSelectedTab] = useState('description'); // State for tabs
   const [showHints, setShowHints] = useState(false); // State to show hints within description if clicked
   const hintsRef = useRef(null); // Ref for scrolling to hints
-  const [showSubmissionResultTab, setShowSubmissionResultTab] = useState(false); // State to control visibility of submission result tab
-  const [submissionResult, setSubmissionResult] = useState(initialSubmissionResult);
 
    // Scroll to hints section when showHints becomes true
    useEffect(() => {
@@ -53,27 +52,25 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult: 
 
   // Function to close the submission result tab
   const handleCloseSubmissionResultTab = () => {
-    setShowSubmissionResultTab(false);
     setSelectedTab('description'); // Switch back to description tab
-    setSubmissionResult(null); // Clear the submission result when closing the tab
+    if(onClearSubmissionResult) onClearSubmissionResult(); // Call parent function to clear submission result
   };
 
-  // Effect to show the submission result tab when submissionResult is received
+  // Effect to automatically switch to the submission result tab when a new result is available
   useEffect(() => {
     if (submissionResult) {
-      setShowSubmissionResultTab(true);
       setSelectedTab('submission-result');
-    } else {
-      setShowSubmissionResultTab(false);
-      if (selectedTab === 'submission-result') {
-         setSelectedTab('description');
-      }
-    }
-  }, [submissionResult]);
+    } 
+    // No else here to avoid switching away from manually selected tabs
+  }, [submissionResult]); // Depend only on submissionResult prop changing
 
-  // Function to handle submission selection
+  // Function to handle submission selection (used by ProblemSubmission component)
   const handleSubmissionSelect = (submission) => {
-    setSubmissionResult(submission);
+    // When a submission is selected from the list, update the submissionResult prop in the parent
+    // This requires a prop to update the parent's state
+    // For now, we'll just log, the parent needs to handle this.
+    console.log("Submission selected:", submission);
+    // A prop like onSubmissionSelected(submission) should be called here.
   };
 
   const renderTabContent = () => {
@@ -279,13 +276,13 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult: 
           <History className="w-4 h-4" />
           Submissions
         </button>
-        {/* Conditionally render Submission Result tab */}
-        {showSubmissionResultTab && submissionResult && (
+        {/* Conditionally render Submission Result tab if submissionResult prop is present */}
+        {submissionResult && ( // Use submissionResult prop directly
             <button
               className={`pb-2 text-sm font-medium flex items-center gap-1 ${selectedTab === 'submission-result' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
               onClick={() => setSelectedTab('submission-result')}
             >
-               <CheckCircle2 className="w-4 h-4" /> {/* Icon for Accepted/Submission Result */}
+               <CheckCircle2 className="w-4 h-4" />
                {submissionResult.status === 'accepted' ? 'Accepted' : 'Submission Result'}
                {/* Close button for the tab */}
                <button

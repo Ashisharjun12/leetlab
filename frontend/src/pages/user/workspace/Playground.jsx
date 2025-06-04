@@ -3,8 +3,6 @@ import PreferNav from './PreferNav'
 import Split from 'react-split'
 import ProblemCodeEditor from './ProblemCodeEditor'
 import ProblemTestCases from './ProblemTestCases'
-import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
 
 // Accept onRun, runResults, isLoading, editorRef, onLanguageChange, and availableLanguages as props
 const Playground = ({ problem, selectedLanguage, onLanguageChange, availableLanguages, onRun, runResults, isLoading, editorRef, onSubmission }) => {
@@ -47,29 +45,9 @@ const Playground = ({ problem, selectedLanguage, onLanguageChange, availableLang
                 {/* ProblemTestCases needs problem (for test cases) and runResults */}
                 <ProblemTestCases 
                    problem={problem}
-                   runResults={runResults} // Pass run results
+                   runResults={runResults} 
                 /> 
             </Split>
-            <div className="flex items-center gap-2">
-                <Button
-                    variant="success"
-                    size="sm"
-                    onClick={onRun}
-                    disabled={isLoading}
-                >
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Run Code
-                </Button>
-                <Button
-                    variant="success"
-                    size="sm"
-                    onClick={onSubmission}
-                    disabled={isLoading}
-                >
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Submit Code
-                </Button>
-            </div>
         </div>
     )
 }

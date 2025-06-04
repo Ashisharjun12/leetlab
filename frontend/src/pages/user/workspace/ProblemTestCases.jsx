@@ -22,26 +22,9 @@ const ProblemTestCases = ({ problem, runResults }) => {
   // Simple function to parse input string like "var="value""
   // This might need to be more robust depending on actual input formats
   // Keeping this function for now, but will display the raw input string in the UI
-  const parseInput = (inputString) => {
-    const lines = inputString.split('\n');
-    const parsed = {};
-    lines.forEach(line => {
-      const parts = line.split('=', 2);
-      if (parts.length === 2) {
-        const key = parts[0].trim();
-        let value = parts[1].trim();
-        // Remove surrounding quotes if present
-        if (value.startsWith('"') && value.endsWith('"')) {
-          value = value.substring(1, value.length - 1);
-        }
-        parsed[key] = value;
-      }
-    });
-    return parsed;
-  };
 
-  // We will display the raw input string directly, not the parsed version
-  // const parsedInput = selectedCase ? parseInput(selectedCase.input) : {};
+
+
 
   const renderTabContent = () => {
     switch (selectedTab) {

@@ -6,6 +6,7 @@ import logger from "../utils/logger.js";
 import { eq } from "drizzle-orm";
 import { generateAccessToken } from "../services/tokenService.js";
 import { Company } from "../models/company.model.js";
+import { imagekit } from "../services/imagekit.js";
 
 const generateToken = async (payload) => {
   logger.info("generating access Token..");
@@ -166,8 +167,153 @@ export const checkUser = (req, res) => {
 };
 
 export const uploadAvatar = async (req, res) => {
-  
+    try {
+        logger.info("hitting upload avatar route...");
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "No file uploaded."
+            });
+        }
+
+        const userId = req.user.id; // Get user ID from authenticated user
+
+        // Generate a unique filename for the avatar
+        const filename = `avatar_${userId}_${Date.now()}_${req.file.originalname}`;
+
+        // Upload file to ImageKit
+        const result = await imagekit.upload({
+            file: req.file.buffer, // Use buffer from multer
+            fileName: filename,
+            folder: "/avatars" // Specify a folder for avatars
+        });
+
+        // Check if upload was successful and get the URL
+        if (!result || !result.url) {
+             logger.error("ImageKit upload failed or returned no URL.");
+             return res.status(500).json({
+                 success: false,
+                 message: "Failed to upload avatar to image service."
+             });
+        }
+
+        const avatarUrl = result.url;
+
+        // Update user's avatar URL in the database
+        const [updatedUser] = await db.update(user)
+            .set({ avatar: avatarUrl })
+            .where(eq(user.id, userId))
+            .returning(); // Return the updated user data
+
+        if (!updatedUser) {
+             logger.error(`Failed to update avatar URL in DB for user ID: ${userId}.`);
+             // Optionally, clean up the uploaded image from ImageKit here
+             return res.status(500).json({
+                 success: false,
+                 message: "Failed to update user avatar in the database."
+             });
+        }
+
+        logger.info(`Avatar updated for user ${userId}: ${avatarUrl}`);
+
+        // Exclude password from the response
+        const { password, ...userDataToSend } = updatedUser;
+
+        res.status(200).json({
+            success: true,
+            message: "Avatar uploaded and updated successfully.",
+            data: userDataToSend,
+        });
+
+    } catch (error) {
+        logger.error("upload avatar error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error during avatar upload.",
+            error: error.message
+        });
+    }
 };
+
+
+export const getLoggedInUser = async(req,res)=>{
+    try {
+        logger.info("hitting get logged in user route....");
+
+        // Assuming authentication middleware has populated req.user
+        const authenticatedUser = req.user;
+
+        if (!authenticatedUser) {
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated.",
+            });
+        }
+
+        // Exclude password from the response for security
+        const { password, ...userDataToSend } = authenticatedUser;
+
+        res.status(200).json({
+            success: true,
+            message: "Logged in user data fetched successfully",
+            data: userDataToSend,
+        });
+
+    } catch (error) {
+        logger.error("get logged in user error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error while fetching logged in user data.",
+            error: error.message
+        });
+    }
+}
+
+
+export const getUserDetailsApi = async(req,res)=>{
+  try {
+    logger.info("hitting get user details by ID route...");
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+
+    // Find user by ID
+    const [userDetails] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userId));
+
+    if (!userDetails) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // Exclude password from the response
+    const { password, ...userDataToSend } = userDetails;
+
+    res.status(200).json({
+      success: true,
+      message: "User details fetched successfully",
+      data: userDataToSend
+    });
+
+  } catch (error) {
+    logger.error("get user details error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching user details",
+      error: error.message
+    });
+  }
+}
 
 
 

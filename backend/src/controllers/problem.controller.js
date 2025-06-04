@@ -10,6 +10,7 @@ import { problem } from "../models/problem.model.js";
 import { eq, sql } from "drizzle-orm";
 import { problemSolved } from "../models/problemSolved.model.js";
 import { Company } from "../models/company.model.js";
+import { discussion } from "../models/discussion.model.js";
 
 export const createProblem = async (req, res) => {
   try {
@@ -171,6 +172,23 @@ export const createProblem = async (req, res) => {
         .returning();
 
       console.log('Created problem:', newProblem);
+
+      // Create an initial discussion 
+      try {
+        await db
+          .insert(discussion)
+          .values({
+            problemId: newProblem.id,
+            userId: req.user.id, // (admin)
+            title: `Discussion for ${newProblem.title}`,
+            content: `Welcome to the discussion thread for ${newProblem.title}! Feel free to share your thoughts, solutions, or ask questions here.`, // Default content
+          });
+        logger.info(`Discussion thread created for problem ${newProblem.id}`);
+      } catch (discussionError) {
+        logger.error("Error creating discussion for problem:", discussionError);
+        console.log("dicussicon error ",discussionError)
+      
+      }
 
       // Get company details for the response
       const allCompanies = await db.select().from(Company);
