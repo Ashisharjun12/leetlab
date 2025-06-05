@@ -8,6 +8,7 @@ import ProblemDiscussion from './ProblemDiscussion'; // Component for Discussion
 import ProblemReferenceSolution from './ProblemReferenceSolution'; // Component for Solution tab
 import ProblemSubmission from './ProblemSubmission'; // Component for Submissions tab
 import ProblemSubmissionResult from './ProblemSubmissionResult'; // Import the new component
+import { submissionAPI } from '@/api/api';
 
 const getDifficultyColor = (difficulty) => {
   switch (difficulty?.toLowerCase()) {
@@ -22,11 +23,29 @@ const getDifficultyColor = (difficulty) => {
   }
 };
 
-// Accept submissionResult and onClearSubmissionResult props
-const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult, onClearSubmissionResult }) => {
+// Accept submissionResult, onClearSubmissionResult, and onSubmissionSelected props
+const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult, onClearSubmissionResult, onSubmissionSelected }) => {
   const [selectedTab, setSelectedTab] = useState('description'); // State for tabs
   const [showHints, setShowHints] = useState(false); // State to show hints within description if clicked
+  const [isSolved, setIsSolved] = useState(false);
   const hintsRef = useRef(null); // Ref for scrolling to hints
+
+  // Add useEffect to check if problem is solved
+  useEffect(() => {
+    const checkIfSolved = async () => {
+      if (problem?.id) {
+        try {
+          const response = await submissionAPI.getSolvedByProblemId(problem.id);
+          console.log("data msms",response)
+          setIsSolved(response.data.data.length > 0);
+        } catch (error) {
+          console.error('Error checking if problem is solved:', error);
+          setIsSolved(false);
+        }
+      }
+    };
+    checkIfSolved();
+  }, [problem?.id]);
 
    // Scroll to hints section when showHints becomes true
    useEffect(() => {
@@ -71,6 +90,9 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult, 
     // For now, we'll just log, the parent needs to handle this.
     console.log("Submission selected:", submission);
     // A prop like onSubmissionSelected(submission) should be called here.
+    if (onSubmissionSelected) {
+      onSubmissionSelected(submission);
+    }
   };
 
   const renderTabContent = () => {
@@ -78,8 +100,16 @@ const ProblemDescriptionPanel = ({ problem, selectedLanguage, submissionResult, 
       case 'description':
         return (
           <div className="p-4 overflow-y-auto hide-scrollbar h-full">
-            {/* Title */}
-            <h2 className="text-2xl font-bold mb-2">{problem.title}</h2>
+            {/* Title and Solved Badge */}
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-bold">{problem.title}</h2>
+              {isSolved && (
+                <Badge className="bg-green-500/10 text-green-500 flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Solved
+                </Badge>
+              )}
+            </div>
 
             {/* Row 1: Difficulty, Tags, and Hints Badge */}
             <div className="flex items-center gap-4 mb-2">

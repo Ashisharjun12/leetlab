@@ -3,6 +3,7 @@ import { playlistAPI } from '../api/api'
 
 const usePlaylistStore = create((set) => ({
   playlists: [],
+  playlistDetails: null,
   loading: false,
   error: null,
 
@@ -35,6 +36,21 @@ const usePlaylistStore = create((set) => ({
     } catch (error) {
       set({ error: error.message, loading: false })
       return { success: false, error: error.message }
+    }
+  },
+
+  // Fetch specific playlist details
+  fetchPlaylistDetails: async (playlistId) => {
+    set({ loading: true, error: null, playlistDetails: null }); // Clear previous details
+    try {
+      const response = await playlistAPI.getPlaylistDetails(playlistId);
+      if (response.data.success) {
+        set({ playlistDetails: response.data.playlist, loading: false });
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch playlist details');
+      }
+    } catch (error) {
+      set({ error: error.message, loading: false, playlistDetails: null });
     }
   },
 

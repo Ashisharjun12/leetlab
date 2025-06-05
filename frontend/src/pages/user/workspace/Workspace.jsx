@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 import useCodeSubmission from '@/hooks/useCodeSubmission';
 
 const Workspace = ({ problem, selectedLanguage, onLanguageChange, availableLanguages }) => {
-  // Use the custom hook for code submission and execution
-  const { isLoading, runResults, submissionResult, submitCode, runCode, clearResults } = useCodeSubmission();
+  // Use the custom hook for code submission and execution, get setSubmissionResult
+  const { isLoading, runResults, submissionResult, submitCode, runCode, clearResults, setSubmissionResult } = useCodeSubmission();
 
   const editorRef = useRef(null);
 
@@ -38,6 +38,11 @@ const Workspace = ({ problem, selectedLanguage, onLanguageChange, availableLangu
       clearResults();
    };
 
+   // Handler for when a submission is selected from the ProblemSubmission list
+   const handleSubmissionSelectedFromList = (submission) => {
+       setSubmissionResult(submission); // Update the submissionResult state in Workspace
+   };
+
   // Workspace component will structure the main split view
   return (
     <div className="h-screen">
@@ -55,12 +60,13 @@ const Workspace = ({ problem, selectedLanguage, onLanguageChange, availableLangu
       >
         {/* Left Panel: Problem Description */}
         <div className="h-full overflow-hidden">
-           {/* Pass submissionResult and the new clear handler to ProblemDescriptionPanel */}
+           {/* Pass submissionResult, the clear handler, and the submission select handler to ProblemDescriptionPanel */}
            <ProblemDescriptionPanel 
               problem={problem} 
               selectedLanguage={selectedLanguage} 
               submissionResult={submissionResult} 
               onClearSubmissionResult={handleClearSubmissionResult}
+              onSubmissionSelected={handleSubmissionSelectedFromList} // Pass the new handler
             />
         </div>
 

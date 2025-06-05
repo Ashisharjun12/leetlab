@@ -81,7 +81,7 @@ const ProblemSubmission = ({ problem, onSubmissionSelect }) => {
     return '';
   };
 
-  // Placeholder content - replace with actual submission history UI and data fetching
+ 
   return (
     <div className="p-4 space-y-4 overflow-y-auto hide-scrollbar h-full"> {/* Add padding and make scrollable */}
       <h3 className="text-lg font-semibold mb-4">Submissions for {problem.title}</h3>

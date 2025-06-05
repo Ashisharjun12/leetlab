@@ -6,6 +6,7 @@ import DifficultyFilter from '../components/DifficultyFilter'
 import { FileQuestion } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import PlaylistActions from '../components/PlaylistActions'
 
 const ProblemSet = () => {
   const {problems, getAllProblems, isLoading} = useProblemStore()
@@ -108,16 +109,19 @@ const ProblemSet = () => {
       </div>
       {/* Search/filter bar and table */}
       <div className="flex items-center gap-3 mb-3">
-        <Input
-          type="text"
-          placeholder="Search problems..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="h-9 text-sm"
-        />
+        <div className="w-[63%]">
+          <Input
+            type="text"
+            placeholder="Search problems..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-9 text-sm"
+          />
+        </div>
         <div style={{minWidth: 140}}>
           <DifficultyFilter value={difficulty} onChange={setDifficulty} className="h-9 text-sm" />
         </div>
+        <PlaylistActions />
       </div>
       {filteredProblems && filteredProblems.length > 0 ? (
         <ProblemTable problems={filteredProblems} />

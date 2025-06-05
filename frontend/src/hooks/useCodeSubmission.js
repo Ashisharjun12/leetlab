@@ -137,7 +137,15 @@ const useCodeSubmission = () => {
     setSubmissionResult(null);
   };
 
-  return { isLoading, runResults, submissionResult, submitCode, runCode, clearResults };
+  return { 
+    isLoading, 
+    runResults, 
+    submissionResult, 
+    submitCode, 
+    runCode, 
+    clearResults,
+    setSubmissionResult
+  };
 };
 
 export default useCodeSubmission; 

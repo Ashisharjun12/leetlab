@@ -13,8 +13,8 @@ export const authAPI = {
   signup: (data) => axiosInstance.post("/auth/register", data),
   logout: () => axiosInstance.post("/auth/logout"),
   checkAuth: () => axiosInstance.get("/auth/check"),
-  me:()=>axiosInstance.get('/auth/me'),
-  getUserDetails:(userId)=>axiosInstance.get(`/auth/details/${userId}`)
+  me: () => axiosInstance.get("/auth/me"),
+  getUserDetails: (userId) => axiosInstance.get(`/auth/details/${userId}`),
 };
 
 //upload file api
@@ -84,6 +84,8 @@ export const submissionAPI = {
     axiosInstance.get(`/submission/get-submission/${problemId}`),
   getAllTheSubmissionsForProblem: (problemId) =>
     axiosInstance.get(`/submission/get-submission-for-count/${problemId}`),
+  getSolvedProblem:()=>axiosInstance.get('/submission/solved'),
+  getSolvedByProblemId:(problemId)=>axiosInstance.get(`/submission/solved/${problemId}`)
 };
 
 // Execute Code API endpoint
@@ -95,8 +97,14 @@ export const executeAPI = {
 
 export const DiscussionAPI = {
   getDisscussionByProblemId: (id) => axiosInstance.get(`/discussion/${id}`),
-  getAllCommentByDiscussionId:(discussionId, page = 1, limit = 10)=>axiosInstance.get(`/discussion/${discussionId}/comments?page=${page}&limit=${limit}`),
-  addComment : (data)=>axiosInstance.post('/discussion/add-commnet',data),
-  removeComment:(commentId)=>axiosInstance.delete(`/discussion/remove-comment/${commentId}`),
-  editComment:(commentId,data)=>axiosInstance.put(`/discussion/comment/${commentId}`,data)
+  getAllCommentByDiscussionId: (discussionId, page = 1, limit = 10) =>
+    axiosInstance.get(
+      `/discussion/${discussionId}/comments?page=${page}&limit=${limit}`
+    ),
+  addComment: (data) => axiosInstance.post("/discussion/add-commnet", data),
+  removeComment: (commentId) =>
+    axiosInstance.delete(`/discussion/remove-comment/${commentId}`),
+  editComment: (commentId, data) =>
+    axiosInstance.put(`/discussion/comment/${commentId}`, data),
 };
+

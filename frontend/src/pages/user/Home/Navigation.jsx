@@ -131,7 +131,7 @@ const Navigation = () => {
                       <Button
                         variant="ghost"
                         className="justify-start w-full cursor-pointer"
-                        onClick={() => navigate('/myprofile')}
+                        onClick={() => navigate('/profile')}
                       >
                         My Profile
                       </Button>

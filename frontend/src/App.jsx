@@ -19,6 +19,8 @@ import ProtectedRoute from './pages/user/routes/ProtectedRoute'
 import Interview from './pages/user/pages/Interview'
 import ProblemSet from './pages/user/pages/ProblemSet'
 import ProblemDetailsPage from './pages/user/pages/ProblemDetailsPage'
+import PlaylistDetails from './pages/user/pages/PlaylistDetails'
+import Profile from './pages/user/pages/Profile'
 
 
 const App = () => {
@@ -52,8 +54,9 @@ const App = () => {
             <Route element={<Layout />}>
               <Route path='/problem-set' element={<ProblemSet />} />
               <Route path='/problem/:problemId' element={<ProblemDetailsPage />} />
-              {/* <Route path='/playlist/:playlistId' element={<PlaylistDetails />} />
-               */}
+              <Route path='/playlist/:playlistId' element={<PlaylistDetails />} />
+              <Route path='/profile' element={<Profile/>}/>
+              
               <Route path='/interview' element={<Interview />} />
             </Route>
           </Route>

@@ -1,13 +1,16 @@
-import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
+import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { companyAPI } from "@/api/api";
+import { useEffect } from "react";
+import { XCircle, CheckCircle2 } from "lucide-react";
+import useSubmissionStore from "@/store/submissionStore";
+import { useCompanyStore } from "@/store/companyStore";
 
-const ProblemTable = ({ problems }) => {
+const ProblemTable = ({ problems, onProblemRemove }) => {
   const navigate = useNavigate();
-  const [companyMap, setCompanyMap] = useState({}); // { [companyId]: { name, url } }
+  const { isProblemSolved, getSolvedProblemById } = useSubmissionStore();
+  const { getCompanyFromCache, getCompanyById } = useCompanyStore();
 
   const getDifficultyColor = (difficulty) => {
     switch (difficulty.toLowerCase()) {
@@ -22,59 +25,75 @@ const ProblemTable = ({ problems }) => {
     }
   };
 
+  // Add new useEffect to check solved status for each problem
   useEffect(() => {
-    // Get unique companyIds from problems
-    const companyIds = Array.from(new Set(problems.flatMap(p => p.companies || []).filter(Boolean)));
-    // Only fetch if not already in companyMap
-    companyIds.forEach(async (companyId) => {
-      if (!companyMap[companyId]) {
-        try {
-          const res = await companyAPI.getCompanyById(companyId);
-          console.log("Company for id", companyId, res.data);
-          const company = res.data?.data;
-          setCompanyMap(prev => ({
-            ...prev,
-            [companyId]: {
-              name: company?.name,
-              url: company?.companyUrl?.url?.url || null
-            }
-          }));
-        } catch (err) {
-          console.error("Error fetching company by id", companyId, err);
+    const checkSolvedStatus = async () => {
+      for (const problem of problems) {
+        if (!isProblemSolved(problem.id)) {
+          await getSolvedProblemById(problem.id);
         }
       }
-    });
-    // eslint-disable-next-line
-  }, [problems]);
+    };
+    checkSolvedStatus();
+  }, [problems, isProblemSolved, getSolvedProblemById]);
+
+  // Add useEffect to fetch company data
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      // Get unique companyIds from problems
+      const companyIds = Array.from(new Set(problems.flatMap(p => p.companies || []).filter(Boolean)));
+      
+      // Fetch data for companies not in cache
+      for (const companyId of companyIds) {
+        if (!getCompanyFromCache(companyId)) {
+          await getCompanyById(companyId);
+        }
+      }
+    };
+
+    fetchCompanyData();
+  }, [problems, getCompanyFromCache, getCompanyById]);
+
+  const handleRowClick = (problemId) => {
+    navigate(`/problem/${problemId}`);
+  };
+
+  const handleRemoveClick = (e, problemId) => {
+    e.stopPropagation();
+    if (onProblemRemove) {
+      onProblemRemove(problemId);
+    }
+  };
 
   return (
-    <div>
+    <div className="rounded-xl border bg-background text-foreground shadow-sm overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableCell>#</TableCell>
-            <TableCell>Title</TableCell>
-            <TableCell>Difficulty</TableCell>
-            <TableCell>Company</TableCell>
-            <TableCell>Tags</TableCell>
-            <TableCell>Action</TableCell>
+            <TableHead className="w-[50px]">#</TableHead>
+            <TableHead>Title</TableHead>
+            <TableHead>Difficulty</TableHead>
+            <TableHead className="w-[200px]">Company</TableHead>
+            <TableHead className="w-[200px]">Tags</TableHead>
+            <TableHead className="w-[80px] ">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {problems.map((problem, idx) => {
             const companies = problem.companies || [];
             const firstCompanyId = companies[0];
-            const firstCompany = firstCompanyId ? companyMap[firstCompanyId] : null;
+            const firstCompany = firstCompanyId ? getCompanyFromCache(firstCompanyId) : null;
             const additionalCompanies = companies.length - 1;
+            const isSolved = isProblemSolved(problem.id);
 
             // Handle tags display
             const visibleTags = problem.tags?.slice(0, 2) || [];
             const additionalTags = (problem.tags?.length || 0) - 2;
 
             return (
-              <TableRow key={problem.id}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>{problem.title}</TableCell>
+              <TableRow key={problem.id} className="cursor-pointer hover:bg-accent/50">
+                <TableCell className="font-medium">{idx + 1}</TableCell>
+                <TableCell className="font-medium" onClick={() => handleRowClick(problem.id)}>{problem.title}</TableCell>
                 <TableCell>
                   <Badge className={getDifficultyColor(problem.difficulty)}>
                     {problem.difficulty}
@@ -83,18 +102,18 @@ const ProblemTable = ({ problems }) => {
                 <TableCell>
                   <div className="flex items-center gap-1">
                     {firstCompany ? (
-                      <Badge variant="secondary" className="flex items-center gap-2 text-sm font-mediu">
+                      <Badge variant="secondary" className="flex items-center gap-2 text-sm font-medium">
                         {firstCompany.url && (
                           <img
                             src={firstCompany.url}
                             alt={firstCompany.name}
-                            style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "cover" }}
+                            className="w-4 h-4 rounded-full object-cover"
                           />
                         )}
-                        <span className="ml-1 truncate" style={{maxWidth: 80}}>{firstCompany.name}</span>
+                        <span className="truncate max-w-[120px]">{firstCompany.name}</span>
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">None</Badge>
+                      <Badge variant="secondary">Loading...</Badge>
                     )}
                     {additionalCompanies > 0 && (
                       <Badge variant="secondary" className="text-xs">+{additionalCompanies}</Badge>
@@ -111,14 +130,37 @@ const ProblemTable = ({ problems }) => {
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Button 
-                    className="bg-green-600 rounded-lg text-white cursor-pointer" 
-                    onClick={() => navigate(`/problem/${problem.id}`)}
-                  >
-                    Solve
-                  </Button>
-                </TableCell>
+                {onProblemRemove && (
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="cursor-pointer"
+                      onClick={(e) => handleRemoveClick(e, problem.id)}
+                    >
+                      Remove
+                    </Button>
+                  </TableCell>
+                )}
+                {!onProblemRemove && (
+                  <TableCell className="text-right">
+                    <Button 
+                      variant={isSolved ? "default" : "outline"} 
+                      size="sm" 
+                      className={`cursor-pointer ${isSolved ? 'bg-green-600 hover:bg-green-600' : ''}`}
+                      onClick={() => handleRowClick(problem.id)}
+                    >
+                      {isSolved ? (
+                        <span className="flex items-center text-white gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Solved
+                        </span>
+                      ) : (
+                        'Solve'
+                      )}
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}
