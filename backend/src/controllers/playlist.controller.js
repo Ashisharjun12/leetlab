@@ -2,7 +2,7 @@ import logger from "../utils/logger.js";
 import { db } from "../config/database.js";
 import { playlist } from "../models/playlist.model.js";
 import { problemInPlaylist } from "../models/problemInPlaylist.model.js";
-import { eq, inArray ,and} from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { problem } from "../models/problem.model.js";
 
 export const createPlaylist = async (req, res) => {
@@ -37,14 +37,20 @@ export const createPlaylist = async (req, res) => {
 
 export const getPlayAllListDetails = async (req, res) => {
   try {
-    logger.info("Getting all playlist details");
+    logger.info("Getting all playlist details for user");
+    const userId = req.user.id;
 
-    const playlistDetails = await db.select().from(playlist);
+    const playlistDetails = await db
+      .select()
+      .from(playlist)
+      .where(eq(playlist.userId, userId))
+      .orderBy(playlist.createdAt);
 
-    if (!playlistDetails) {
-      return res.status(404).json({
-        success: false,
-        message: "Playlist not found",
+    if (!playlistDetails || playlistDetails.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No playlists found for this user",
+        playlist: [],
       });
     }
 
@@ -66,18 +72,23 @@ export const getPlayAllListDetails = async (req, res) => {
 export const getPlayListDetails = async (req, res) => {
   try {
     logger.info("Getting playlist details");
-
     const { playlistId } = req.params;
+    const userId = req.user.id;
 
     const [playlistDetails] = await db
       .select()
       .from(playlist)
-      .where(eq(playlist.id, playlistId));
+      .where(
+        and(
+          eq(playlist.id, playlistId),
+          eq(playlist.userId, userId)
+        )
+      );
 
     if (!playlistDetails) {
       return res.status(404).json({
         success: false,
-        message: "Playlist not found",
+        message: "Playlist not found or you don't have access to it",
       });
     }
 
@@ -115,6 +126,25 @@ export const addProblemToPlaylist = async (req, res) => {
     logger.info("Adding problem to playlist");
     const { playlistId } = req.params;
     const { problemIds } = req.body; // array of problme ids
+    const userId = req.user.id;
+
+    // First verify that the playlist belongs to the user
+    const [playlistData] = await db
+      .select()
+      .from(playlist)
+      .where(
+        and(
+          eq(playlist.id, playlistId),
+          eq(playlist.userId, userId)
+        )
+      );
+
+    if (!playlistData) {
+      return res.status(404).json({
+        success: false,
+        message: "Playlist not found or you don't have access to it",
+      });
+    }
 
     if (!Array.isArray(problemIds) || problemIds.length === 0) {
       return res.status(400).json({ error: "Invalid or missing problemIds" });
@@ -146,13 +176,24 @@ export const deletePlayList = async (req, res) => {
   try {
     logger.info("Deleting playlist");
     const { playlistId } = req.params;
+    const userId = req.user.id;
 
+    // First verify that the playlist belongs to the user
     const [playlistData] = await db
       .delete(playlist)
-      .where(eq(playlist.id, playlistId)).returning();
+      .where(
+        and(
+          eq(playlist.id, playlistId),
+          eq(playlist.userId, userId)
+        )
+      )
+      .returning();
 
     if (!playlistData) {
-      return res.status(404).json({ error: "Playlist not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Playlist not found or you don't have access to it",
+      });
     }
 
     res.status(200).json({
@@ -175,6 +216,25 @@ export const removeProblemFromPlaylist = async (req, res) => {
     logger.info("Removing problem from playlist");
     const { playlistId } = req.params;
     const { problemIds } = req.body;
+    const userId = req.user.id;
+
+    // First verify that the playlist belongs to the user
+    const [playlistData] = await db
+      .select()
+      .from(playlist)
+      .where(
+        and(
+          eq(playlist.id, playlistId),
+          eq(playlist.userId, userId)
+        )
+      );
+
+    if (!playlistData) {
+      return res.status(404).json({
+        success: false,
+        message: "Playlist not found or you don't have access to it",
+      });
+    }
 
     if (!Array.isArray(problemIds) || problemIds.length === 0) {
       return res.status(400).json({ error: "Invalid or missing problemIds" });

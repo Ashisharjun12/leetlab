@@ -85,7 +85,10 @@ export const submissionAPI = {
   getAllTheSubmissionsForProblem: (problemId) =>
     axiosInstance.get(`/submission/get-submission-for-count/${problemId}`),
   getSolvedProblem:()=>axiosInstance.get('/submission/solved'),
-  getSolvedByProblemId:(problemId)=>axiosInstance.get(`/submission/solved/${problemId}`)
+  getSolvedByProblemId:(problemId)=>axiosInstance.get(`/submission/solved/${problemId}`),
+  getAllSolvedProblemByUserId:(userId)=>axiosInstance.get(`/submission/solved/user/${userId}`),
+  getSolvedProblemByProblemIdUserId:(userId,problemId)=>axiosInstance.get(`/submission/solved/user/${userId}/problem/${problemId}`),
+  getActivityStreakByUserId:(userId, year)=>axiosInstance.get(`submission/activity/user/${userId}${year ? `?year=${year}` : ''}`),
 };
 
 // Execute Code API endpoint

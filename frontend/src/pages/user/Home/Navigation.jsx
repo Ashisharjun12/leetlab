@@ -17,6 +17,7 @@ const Navigation = () => {
   }, [authUser , logout])
 
   const user = {
+    id:authUser?.id,
     name: authUser?.name,
     email: authUser?.email,
     avatar: authUser?.avatar,
@@ -131,7 +132,7 @@ const Navigation = () => {
                       <Button
                         variant="ghost"
                         className="justify-start w-full cursor-pointer"
-                        onClick={() => navigate('/profile')}
+                        onClick={() => navigate(`/profile/${user.id}`)}
                       >
                         My Profile
                       </Button>

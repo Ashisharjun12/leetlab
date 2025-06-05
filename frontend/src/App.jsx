@@ -21,6 +21,8 @@ import ProblemSet from './pages/user/pages/ProblemSet'
 import ProblemDetailsPage from './pages/user/pages/ProblemDetailsPage'
 import PlaylistDetails from './pages/user/pages/PlaylistDetails'
 import Profile from './pages/user/pages/Profile'
+import ViewAllSubmission from './pages/user/pages/ViewAllSubmission'
+import ViewAllSolvedProblem from './pages/user/pages/ViewAllSolvedProblem'
 
 
 const App = () => {
@@ -54,8 +56,10 @@ const App = () => {
             <Route element={<Layout />}>
               <Route path='/problem-set' element={<ProblemSet />} />
               <Route path='/problem/:problemId' element={<ProblemDetailsPage />} />
+              <Route path='/view-all-solved-problem/:userId' element={<ViewAllSolvedProblem/>}/>
+              <Route path='/view-all-submission/:userId' element={<ViewAllSubmission/>}/>
               <Route path='/playlist/:playlistId' element={<PlaylistDetails />} />
-              <Route path='/profile' element={<Profile/>}/>
+              <Route path='/profile/:userId' element={<Profile/>}/>
               
               <Route path='/interview' element={<Interview />} />
             </Route>

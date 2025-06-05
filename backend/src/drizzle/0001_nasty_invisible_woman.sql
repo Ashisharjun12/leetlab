@@ -1,0 +1,2 @@
+ALTER TABLE "problem_in_playlist" ADD COLUMN "user_id" uuid;--> statement-breakpoint
+ALTER TABLE "problem_in_playlist" ADD CONSTRAINT "problem_in_playlist_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
