@@ -3,6 +3,11 @@ import React, { useEffect, useState } from 'react'
 import { useLocation } from "react-router-dom"
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Settings, MessageSquare, Users, Clock, Bot } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Meeting = () => {
     const location = useLocation()
@@ -12,6 +17,9 @@ const Meeting = () => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [error, setError] = useState(null);
     const [vapi, setVapi] = useState(null);
+    const [isMuted, setIsMuted] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(false);
+    const [elapsedTime, setElapsedTime] = useState(0);
 
     useEffect(() => {
         const initVapi = async () => {
@@ -19,17 +27,18 @@ const Meeting = () => {
                 const vapiInstance = new Vapi('31d956c9-9a86-45ad-8e9d-edb423d404d9');
                 setVapi(vapiInstance);
 
-                // Event listeners
                 vapiInstance.on('call-start', () => {
                     console.log('Call started');
                     setIsConnected(true);
                     setError(null);
+                    startTimer();
                 });
 
                 vapiInstance.on('call-end', () => {
                     console.log('Call ended');
                     setIsConnected(false);
                     setIsSpeaking(false);
+                    setElapsedTime(0);
                 });
 
                 vapiInstance.on('speech-start', () => {
@@ -67,6 +76,22 @@ const Meeting = () => {
             }
         };
     }, []);
+
+    useEffect(() => {
+        let timer;
+        if (isConnected) {
+            timer = setInterval(() => {
+                setElapsedTime(prev => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [isConnected]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     const startCall = async () => {
         if (!vapi) {
@@ -140,40 +165,178 @@ const Meeting = () => {
         }
     }
 
+    const toggleMute = () => {
+        setIsMuted(!isMuted);
+    };
+
+    const toggleVideo = () => {
+        setIsVideoOff(!isVideoOff);
+    };
+
     return (
-        <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">AI Interview Session</h1>
+        <div className="h-screen flex flex-col overflow-hidden">
+            {/* Header */}
+            <Card className="rounded-none border-x-0 border-t-0 h-16">
+                <div className="flex items-center justify-between h-full px-4">
+                    <div className="flex items-center space-x-4">
+                        <h1 className="text-lg font-semibold truncate">{InterviewInfo?.jobPosition} Interview</h1>
+                        <Badge variant="outline" className="flex items-center gap-1 shrink-0">
+                            <Clock className="w-4 h-4" />
+                            {formatTime(elapsedTime)}
+                        </Badge>
+                    </div>
+                    <Button variant="ghost" size="icon" className="shrink-0">
+                        <Settings className="w-5 h-5" />
+                    </Button>
+                </div>
+            </Card>
+
+            {/* Main Content */}
+            <div className="flex-1 flex min-h-0">
+                {/* Main Video Area */}
+                <div className="flex-1 p-2">
+                    <Card className="h-full flex items-center justify-center relative overflow-hidden">
+                        {!isConnected ? (
+                            <div className="text-center space-y-4">
+                                <div className="relative">
+                                    <Avatar className="w-24 h-24 mx-auto">
+                                        <AvatarImage src="/ai-avatar.png" alt="AI Interviewer" />
+                                        <AvatarFallback className="bg-primary/10">
+                                            <Bot className="w-12 h-12 text-primary" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                                        <Badge variant="secondary" className="px-2 py-0.5 text-xs">
+                                            AI Interviewer
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <h2 className="text-xl font-semibold">Ready to start your interview?</h2>
+                                <Button 
+                                    onClick={startCall} 
+                                    disabled={!vapi}
+                                    size="lg"
+                                    className="px-6"
+                                >
+                                    Start Interview
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="absolute top-2 left-2">
+                                    <Badge variant="secondary" className={cn(
+                                        "flex items-center gap-1 px-2 py-0.5 text-xs",
+                                        isSpeaking && "bg-primary text-primary-foreground"
+                                    )}>
+                                        <div className={cn(
+                                            "w-1.5 h-1.5 rounded-full",
+                                            isSpeaking ? "bg-primary-foreground animate-pulse" : "bg-primary"
+                                        )} />
+                                        {isSpeaking ? 'AI Speaking...' : 'Listening...'}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="w-16 h-16">
+                                        <AvatarImage src="/ai-avatar.png" alt="AI Interviewer" />
+                                        <AvatarFallback className="bg-primary/10">
+                                            <Bot className="w-8 h-8 text-primary" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="text-center">
+                                        <h3 className="text-base font-semibold">AI Interviewer</h3>
+                                        <p className="text-sm text-muted-foreground">Interview in progress</p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </Card>
+                </div>
+
+                {/* Sidebar */}
+                <Card className="w-64 border-l rounded-none hidden lg:block">
+                    <div className="p-2 space-y-2">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-sm font-semibold">Participants</h3>
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex items-center space-x-2 p-1.5 rounded-lg bg-muted">
+                                <Avatar className="w-8 h-8">
+                                    <AvatarImage src={authUser?.avatar} alt={authUser?.name} />
+                                    <AvatarFallback className="bg-primary/10 text-xs">
+                                        {authUser?.name?.[0]?.toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm truncate">{authUser?.name}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 p-1.5 rounded-lg bg-muted">
+                                <Avatar className="w-8 h-8">
+                                    <AvatarImage src="/ai-avatar.png" alt="AI Interviewer" />
+                                    <AvatarFallback className="bg-primary/10">
+                                        <Bot className="w-4 h-4 text-primary" />
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm truncate">AI Interviewer</span>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+
+            {/* Controls */}
+            <Card className="rounded-none border-x-0 border-b-0 h-16">
+                <div className="flex items-center justify-center h-full space-x-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "rounded-full h-10 w-10",
+                            isMuted && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        )}
+                        onClick={toggleMute}
+                    >
+                        {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "rounded-full h-10 w-10",
+                            isVideoOff && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        )}
+                        onClick={toggleVideo}
+                    >
+                        {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full h-10 w-10 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={endCall}
+                    >
+                        <PhoneOff className="w-5 h-5" />
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full h-10 w-10"
+                    >
+                        <MessageSquare className="w-5 h-5" />
+                    </Button>
+                </div>
+            </Card>
+
+            {/* Error Message */}
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    {error}
+                <div className="fixed top-2 left-1/2 transform -translate-x-1/2">
+                    <Badge variant="destructive" className="px-3 py-1 text-xs">
+                        {error}
+                    </Badge>
                 </div>
             )}
-            <div className="space-x-4">
-                {!isConnected ? (
-                    <Button 
-                        onClick={startCall} 
-                        disabled={!vapi}
-                        className="bg-green-500 hover:bg-green-600"
-                    >
-                        Start Interview
-                    </Button>
-                ) : (
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${isSpeaking ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
-                            <span className="font-medium">
-                                {isSpeaking ? 'Assistant Speaking...' : 'Listening...'}
-                            </span>
-                        </div>
-                        <Button 
-                            onClick={endCall}
-                            className="bg-red-500 hover:bg-red-600"
-                        >
-                            End Interview
-                        </Button>
-                    </div>
-                )}
-            </div>
         </div>
     )
 }
