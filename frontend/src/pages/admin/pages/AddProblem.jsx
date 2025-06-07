@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, FileText, Plus, ChevronUp, ChevronDown, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, FileText, Plus, ChevronUp, ChevronDown, Upload, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sampleProblems } from '@/data/sampleProblems';
 import {
   Dialog,
@@ -102,6 +102,7 @@ const AddProblem = () => {
   const [selectedCompanies, setSelectedCompanies] = useState([]);
   const [problemImage, setProblemImage] = useState(null);
   const [openExamples, setOpenExamples] = useState({});
+  const [currentSampleIndex, setCurrentSampleIndex] = useState(0);
 
   // Initialize react-hook-form
   const form = useForm({
@@ -186,15 +187,42 @@ const AddProblem = () => {
      setValue('testCases', [...currentTestCases, { input: '', output: '' }]);
   }
 
-  const loadSampleData = (sample) => {
+  const loadSampleData = (index) => {
+    const sample = sampleProblems[index];
+    if (!sample) return;
+
     // Reset form with sample data
-    reset(sample);
+    reset({
+      title: sample.title,
+      description: sample.description,
+      difficulty: sample.difficulty,
+      tags: sample.tags.join(', '),
+      constraints: sample.constraints.join(', '),
+      examples: sample.examples,
+      testCases: sample.testCases,
+      codeSnippets: sample.codeSnippets,
+      reference_solution: sample.reference_solution,
+      hints: [''],
+      problemImage: null
+    });
+
     // Set selected languages based on sample data code snippets keys
     setSelectedLanguages(Object.keys(sample.codeSnippets || {}));
-    // Set selected companies from sample data
-    setSelectedCompanies(sample.companyIds || []);
-    // Set problem image from sample data
-    setProblemImage(sample.problemImage || null);
+    
+    // Set current sample index
+    setCurrentSampleIndex(index);
+  };
+
+  // Add this function to load next sample
+  const loadNextSample = () => {
+    const nextIndex = (currentSampleIndex + 1) % sampleProblems.length;
+    loadSampleData(nextIndex);
+  };
+
+  // Add this function to load previous sample
+  const loadPreviousSample = () => {
+    const prevIndex = (currentSampleIndex - 1 + sampleProblems.length) % sampleProblems.length;
+    loadSampleData(prevIndex);
   };
 
   // Handle company selection
@@ -469,19 +497,36 @@ const AddProblem = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle>Add New Problem</CardTitle>
                   <div className="flex gap-2">
-                    {sampleProblems.map((sample, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        onClick={() => loadSampleData(sample)}
-                        className="flex items-center gap-2"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Sample {index + 1}
-                      </Button>
-                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => loadPreviousSample()}
+                      className="flex items-center gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => loadSampleData(currentSampleIndex)}
+                      className="flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Load Sample {currentSampleIndex + 1}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => loadNextSample()}
+                      className="flex items-center gap-2"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardHeader>

@@ -14,6 +14,7 @@ export const authAPI = {
   logout: () => axiosInstance.post("/auth/logout"),
   checkAuth: () => axiosInstance.get("/auth/check"),
   me: () => axiosInstance.get("/auth/me"),
+  total:()=>axiosInstance.get('/admin/total'),
   getUserDetails: (userId) => axiosInstance.get(`/auth/details/${userId}`),
 };
 
@@ -35,6 +36,16 @@ export const userAPI = {
   getProfile: () => axiosInstance.get("/user/profile"),
   updateProfile: (data) => axiosInstance.put("/user/profile", data),
   me: () => axiosInstance.get("/me"),
+  getUserStats:(userId)=>axiosInstance.get(`/auth/statistics/${userId}`),
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return axiosInstance.post("/auth/upload-avatar", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  }
 };
 
 // Problem API endpoints
@@ -111,3 +122,10 @@ export const DiscussionAPI = {
     axiosInstance.put(`/discussion/comment/${commentId}`, data),
 };
 
+
+
+export const InterviewAPI = {
+  createInterview:(data)=>axiosInstance.post('/interview/create',data),
+  getuserInterviews:()=>axiosInstance.get('/interview/all'),
+  getInterviewById:(InterviewId)=>axiosInstance.get(`/interview/get/${InterviewId}`)
+}

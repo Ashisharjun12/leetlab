@@ -102,7 +102,7 @@ const ViewAllSolvedProblem = () => {
     return (
       <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-4">All Solved Problems</h1>
-        <div className="overflow-x-auto rounded-md overflow-hidden border border-gray-200">
+        <div className="overflow-x-auto rounded-md overflow-hidden border">
           <Table>
             <TableHeader>
               <TableRow>

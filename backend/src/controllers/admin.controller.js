@@ -1,7 +1,9 @@
 import { db } from "../config/database.js";
 import { user } from "../models/user.model.js";
+import { problem } from "../models/problem.model.js";
+import { submission } from "../models/submission.model.js";
 import logger from "../utils/logger.js";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -71,3 +73,51 @@ export const changeRole = async (req, res) => {
     });
   }
 };
+
+export const getTotal = async(req,res)=>{
+  try {
+    logger.info("Getting total counts for users, problems, and submissions");
+
+    // Get total users count
+    const [userCount] = await db
+      .select({ count: count() })
+      .from(user);
+
+    // Get total problems count
+    const [problemCount] = await db
+      .select({ count: count() })
+      .from(problem);
+
+    // Get total submissions count
+    const [submissionCount] = await db
+      .select({ count: count() })
+      .from(submission);
+
+    // Get total accepted submissions count
+    const [acceptedSubmissionCount] = await db
+      .select({ count: count() })
+      .from(submission)
+      .where(eq(submission.status, 'accepted'));
+
+    return res.status(200).json({
+      success: true,
+      message: "Total counts fetched successfully",
+      data: {
+        totalUsers: userCount.count,
+        totalProblems: problemCount.count,
+        totalSubmissions: submissionCount.count,
+        totalAcceptedSubmissions: acceptedSubmissionCount.count
+      }
+    });
+    
+  } catch (error) {
+    logger.error("Error in getting total", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error in getting total counts",
+      error: error.message
+    });
+  }
+}
+
+

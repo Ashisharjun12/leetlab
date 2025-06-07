@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { registerUser, loginUser, logoutUser, uploadAvatar, checkUser, getLoggedInUser, getUserDetailsApi } from '../controllers/user.controller.js';
+import { registerUser, loginUser, logoutUser, uploadAvatar, checkUser, getLoggedInUser, getUserDetailsApi, getUserStatistics } from '../controllers/user.controller.js';
 import { authenticate } from '../middleware/authienticate.js';
+import { upload } from '../utils/multer.js';
 
 
 
@@ -11,7 +12,8 @@ router.post('/logout',authenticate,logoutUser);
 router.get('/check',authenticate,checkUser)
 router.get('/me',authenticate,getLoggedInUser)
 router.get('/details/:userId',getUserDetailsApi)
-router.post('/upload-avatar', uploadAvatar);
+router.get('/statistics/:userId',getUserStatistics)
+router.post('/upload-avatar', upload.single('file'), authenticate, uploadAvatar);
 
 
 

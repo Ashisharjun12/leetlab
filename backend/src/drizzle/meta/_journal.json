@@ -15,6 +15,34 @@
       "when": 1749068017958,
       "tag": "0001_nasty_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749233801437,
+      "tag": "0002_strange_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1749233860171,
+      "tag": "0003_sticky_makkari",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1749235275555,
+      "tag": "0004_red_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1749235740272,
+      "tag": "0005_flaky_justin_hammer",
+      "breakpoints": true
     }
   ]
 }

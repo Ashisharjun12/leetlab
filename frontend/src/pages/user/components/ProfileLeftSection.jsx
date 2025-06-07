@@ -1,12 +1,14 @@
 import React from 'react';
-import ProfileStatistics from './ProfileStatistics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, CalendarDays, Upload } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import ProfileStatistics from './ProfileStatistics';
+import { userAPI } from '@/api/api';
+import { toast } from 'sonner';
 
-const ProfileLeftSection = ({ userDetails, isOwnProfile }) => {
+const ProfileLeftSection = ({ userDetails, isOwnProfile, userId, onAvatarUpdate }) => {
   // userDetails is passed from Profile.jsx
   
   const joinedDate = userDetails?.createdAt ? format(new Date(userDetails.createdAt), 'dd/MM/yyyy') : 'N/A';
@@ -19,15 +21,19 @@ const ProfileLeftSection = ({ userDetails, isOwnProfile }) => {
     if (!file) return;
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      // Add your image upload API call here
-      // On success, you might want to refetch user details or update the avatar in the store
-      console.log('Uploading image...', file);
-      // toast.success("Profile image updated successfully");
+      const response = await userAPI.uploadAvatar(file);
+      if (response.data.success) {
+        // Call the callback to update the avatar in the parent component
+        if (onAvatarUpdate) {
+          onAvatarUpdate(response.data.data.avatar);
+        }
+        toast.success("Profile image updated successfully");
+      } else {
+        toast.error(response.data.message || "Failed to update profile image");
+      }
     } catch (error) {
       console.error("Failed to update profile image:", error);
-      // toast.error("Failed to update profile image");
+      toast.error(error.response?.data?.message || "Failed to update profile image");
     }
   };
 
@@ -70,43 +76,15 @@ const ProfileLeftSection = ({ userDetails, isOwnProfile }) => {
               <CalendarDays className="w-4 h-4"/>
               <span>Joined on {joinedDate}</span>
             </div>
-             {/* Role badge - if needed */}
-             {/* {userDetails?.role && (
-                <Badge variant="secondary" className="mt-2">
-                   {userDetails.role}
-                </Badge>
-             )} */}
+            
+           
           </div>
         </div>
       </Card>
 
-      {/* Profile Statistics Card */}
-      {/* userDetails is passed down to ProfileStatistics */}
-      <ProfileStatistics userDetails={userDetails} />
+      <ProfileStatistics userId={userId}/>
+     \gh'
 
-      {/* Ranking Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-          <Trophy className="w-4 h-4 text-muted-foreground" />
-          <CardTitle className="text-sm font-medium">Ranking</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-         <div className="grid grid-cols-3 gap-4 text-center mt-4">
-            <div>
-               <h3 className="text-xl font-bold">{userRank}</h3>
-               <p className="text-sm text-muted-foreground">Your Rank</p>
-            </div>
-             <div>
-               <h3 className="text-xl font-bold">{userPercentile}</h3>
-               <p className="text-sm text-muted-foreground">Percentile</p>
-            </div>
-             <div>
-               <h3 className="text-xl font-bold">{totalUsers}</h3>
-               <p className="text-sm text-muted-foreground">Total Users</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

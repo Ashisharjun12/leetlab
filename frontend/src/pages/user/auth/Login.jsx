@@ -35,6 +35,7 @@ const Login = () => {
   const onSubmit = async (values) => {
     try {
       await login(values);
+      window.location.reload();
       navigate('/');
     } catch (error) {
       console.error("Login error:", error);

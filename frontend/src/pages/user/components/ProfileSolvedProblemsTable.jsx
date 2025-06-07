@@ -27,9 +27,7 @@ const ProfileSolvedProblemsTable = ({ problems, isLoading, userId }) => {
   if (isLoading) {
     return (
       <div className="overflow-x-auto">
-        <div className="flex justify-end mb-2">
-           <Skeleton className="h-4 w-32" />
-        </div>
+        
         <Table>
           <TableHeader>
             <TableRow>
@@ -61,11 +59,7 @@ const ProfileSolvedProblemsTable = ({ problems, isLoading, userId }) => {
 
   return (
     <div className="overflow-x-auto">
-        <div className="flex justify-end mb-2">
-           <Link to={`/view-all-solved-problem/${userId}`} className="text-sm text-muted-foreground hover:underline flex items-center">
-             View All Solved Problems <ChevronRight className="w-4 h-4 ml-1" />
-           </Link>
-        </div>
+        
       <Table>
         <TableHeader>
           <TableRow>

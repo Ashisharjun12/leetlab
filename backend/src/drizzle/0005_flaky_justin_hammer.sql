@@ -1,0 +1,1 @@
+ALTER TABLE "interviews" ADD COLUMN "interview_difficulty" text DEFAULT 'medium' NOT NULL;

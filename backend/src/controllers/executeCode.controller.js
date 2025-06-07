@@ -28,74 +28,120 @@ const mapJudge0Status = (status) => {
 // Function to execute code and get results
 const executeCodeWithJudge0 = async (source_code, language_id, stdin, expected_outputs) => {
   try {
-    //validate test case
-    if (
-      !Array.isArray(stdin) ||
-      !Array.isArray(expected_outputs) ||
-      stdin.length !== expected_outputs.length
-    ) {
-      throw new Error("Invalid test case");
+    // Input validation
+    if (!source_code || !language_id) {
+      throw new Error("Source code and language ID are required");
     }
 
-    //prepare each test case for judge0 batch submission
-    const submissionData = stdin.map((input, index) => ({
+    if (!Array.isArray(stdin) || !Array.isArray(expected_outputs) || stdin.length !== expected_outputs.length) {
+      throw new Error("Invalid test cases format");
+    }
+
+    // Prepare submissions for Judge0
+    const submissions = stdin.map((input, index) => ({
       source_code,
       language_id,
       stdin: input,
       expected_output: expected_outputs[index],
-      base64_encoded: false,
-      wait: false,
+      wait: false
     }));
 
-    logger.info("Submitting batch to Judge0");
-    logger.debug("Submission Data:", JSON.stringify(submissionData, null, 2));
-    
-    //submit to judge0
-    const submissionResponse = await submitBatch(submissionData);
-    logger.info("Received submission response from Judge0");
-    logger.debug("Submission Response:", JSON.stringify(submissionResponse, null, 2));
+    logger.info("Submitting code to Judge0:", { submissions });
 
-    const tokens = submissionResponse.map((res) => res.token);
+    // Submit code to Judge0
+    const { data: submissionResults, submissionMap } = await submitBatch(submissions);
+    const tokens = submissionResults.map((res) => res.token);
 
-    logger.info("Polling results from Judge0");
-    logger.debug("Tokens:", tokens);
-    
-    //poll results from judge0
-    const results = await pollbatchResults(tokens);
-    logger.info("Received results from Judge0");
-    logger.debug("Results:", JSON.stringify(results, null, 2));
+    if (!tokens || tokens.length === 0) {
+      throw new Error("No tokens received from Judge0");
+    }
 
-    //analyse results
-    let AllPassed = true;
-    const detailedResults = results.map((result, index) => {
-      const stdOut = result.stdout?.trim();
-      const expectedOutput = expected_outputs[index]?.trim();
-      const passed = stdOut === expectedOutput;
+    // Poll for results
+    const results = await pollbatchResults(tokens, submissionMap);
+    logger.info("Received results from Judge0:", { results });
 
+    if (!results || results.length === 0) {
+      throw new Error("No results received from Judge0");
+    }
+
+    // Analyze results
+    let allPassed = true;
+    let totalTime = 0;
+    let totalMemory = 0;
+    let failedTestCases = 0;
+    let hasError = false;
+    let errorMessage = '';
+
+    const detailedResults = results.map((result) => {
+      const status = mapJudge0Status(result.status.id);
+      const hasRuntimeError = result.status.id > 3;
+      const actualOutput = String(result.stdout || '').trim();
+      const expectedOutput = String(result.expected_output || '').trim();
+      const passed = !hasRuntimeError && actualOutput === expectedOutput;
+      
       if (!passed) {
-        AllPassed = false;
+        allPassed = false;
+        failedTestCases++;
       }
 
+      if (hasRuntimeError || result.stderr) {
+        hasError = true;
+        errorMessage = result.stderr || result.compile_output || result.message || 'Unknown error';
+      }
+
+      // Add execution time and memory if available
+      if (result.time) totalTime += parseFloat(result.time);
+      if (result.memory) totalMemory += parseFloat(result.memory);
+
       return {
-        testCase: index + 1,
-        passed,
-        expectedOut: expectedOutput,
-        stdOut: stdOut,
-        stderr: result.stderr || null,
-        compileOut: result.compile_output || null,
-        status: mapJudge0Status(result.status.description),
+        input: result.stdin,
+        expectedOut: result.expected_output,
+        stdOut: actualOutput,
+        error: result.stderr || result.compile_output || '',
         time: result.time ? `${result.time}ms` : null,
         memory: result.memory ? `${result.memory}KB` : null,
-        message: passed ? "Passed" : "Failed",
+        passed,
+        status
       };
     });
 
+    // Calculate average time and memory
+    const avgTime = totalTime > 0 ? totalTime / results.length : null;
+    const avgMemory = totalMemory > 0 ? totalMemory / results.length : null;
+
+    // Determine overall status
+    let overallStatus = 'success';
+    if (hasError) {
+      overallStatus = 'error';
+    } else if (failedTestCases > 0) {
+      overallStatus = 'wrong_answer';
+    }
+
     return {
-      allPassed: AllPassed,
-      detailedResults
+      allPassed,
+      executionTime: avgTime ? `${avgTime.toFixed(2)}ms` : null,
+      memoryUsed: avgMemory ? `${avgMemory.toFixed(2)}KB` : null,
+      passedTestCases: results.length - failedTestCases,
+      totalTestCases: results.length,
+      failedTestCases,
+      detailedResults,
+      executionSummary: {
+        status: overallStatus,
+        message: hasError 
+          ? `Error: ${errorMessage}`
+          : allPassed 
+            ? 'All test cases passed successfully!' 
+            : `${failedTestCases} test case(s) failed`,
+        executionTime: avgTime ? `${avgTime.toFixed(2)}ms` : null,
+        memoryUsed: avgMemory ? `${avgMemory.toFixed(2)}KB` : null,
+        passedTestCases: results.length - failedTestCases,
+        totalTestCases: results.length,
+        failedTestCases,
+        error: hasError ? errorMessage : null
+      }
     };
   } catch (error) {
-    logger.error("Error executing code:", error);
+    logger.error("Error in executeCodeWithJudge0:", error);
     throw error;
   }
 };
@@ -104,7 +150,7 @@ const executeCodeWithJudge0 = async (source_code, language_id, stdin, expected_o
 const createSubmission = async (userId, problemId, source_code, stdin, executionResults, languageId) => {
   try {
     const { allPassed, detailedResults } = executionResults;
-
+    
     // Create submission
     const [newSubmission] = await db
       .insert(submission)
@@ -144,10 +190,10 @@ const createSubmission = async (userId, problemId, source_code, stdin, execution
         });
     }
 
-    // Save individual test cases results
-    const testCaseResultsForDb = detailedResults.map((r) => ({
+    // Save individual test cases results with proper test case numbers
+    const testCaseResultsForDb = detailedResults.map((r, index) => ({
       submissionId: newSubmission.id,
-      testCase: r.testCase,
+      testCase: index + 1, // Add test case number starting from 1
       passed: r.passed,
       stdOut: r.stdOut,
       expectedOut: r.expectedOut,
@@ -212,7 +258,7 @@ export const executeCode = async (req, res) => {
     } else {
       logger.error("Error message:", error.message);
     }
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: "Internal server error" 
     });
@@ -259,7 +305,7 @@ export const createSubmissionForExecutedCode = async (req, res) => {
     } else {
       logger.error("Error message:", error.message);
     }
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: "Internal server error" 
     });

@@ -3,10 +3,11 @@ import { db } from "../config/database.js";
 import { user } from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import logger from "../utils/logger.js";
-import { eq } from "drizzle-orm";
+import { eq, count, sql, and} from "drizzle-orm";
 import { generateAccessToken } from "../services/tokenService.js";
-import { Company } from "../models/company.model.js";
 import { imagekit } from "../services/imagekit.js";
+import { submission } from "../models/submission.model.js";
+import { problem } from "../models/problem.model.js";
 
 const generateToken = async (payload) => {
   logger.info("generating access Token..");
@@ -189,6 +190,10 @@ export const uploadAvatar = async (req, res) => {
             folder: "/avatars" // Specify a folder for avatars
         });
 
+        // Log the upload result
+        console.log("Upload result:", result);
+        console.log("Avatar URL:", result.url);
+
         // Check if upload was successful and get the URL
         if (!result || !result.url) {
              logger.error("ImageKit upload failed or returned no URL.");
@@ -316,4 +321,118 @@ export const getUserDetailsApi = async(req,res)=>{
 }
 
 
+export const getUserStatistics = async (req, res) => {
+  try {
+    logger.info("hitting get user statistics route...");
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    // 1. Get total number of submissions for the user
+    const totalSubmissionsResult = await db
+      .select({ count: count() })
+      .from(submission)
+      .where(eq(submission.userId, userId));
+
+    const totalSubmissions = totalSubmissionsResult[0]?.count || 0;
+
+    // 2. Get unique solved problems (status = 'accepted') for the user
+    const solvedSubmissions = await db
+      .select({
+        problemId: submission.problemId,
+        languageId: submission.languageId, // Get languageId from submission
+        createdAt: submission.createdAt
+      })
+      .from(submission)
+      .where(and(eq(submission.userId, userId), eq(submission.status, 'accepted')));
+    
+    // Filter to get only the latest accepted submission for each problem
+    const latestSolvedSubmissionsMap = new Map();
+    solvedSubmissions.forEach(sub => {
+        if (!latestSolvedSubmissionsMap.has(sub.problemId) || new Date(sub.createdAt) > new Date(latestSolvedSubmissionsMap.get(sub.problemId).createdAt)) {
+            latestSolvedSubmissionsMap.set(sub.problemId, sub);
+        }
+    });
+
+    const uniqueSolvedSubmissions = Array.from(latestSolvedSubmissionsMap.values());
+    const totalSolvedProblems = uniqueSolvedSubmissions.length;
+    const uniqueSolvedProblemIds = uniqueSolvedSubmissions.map(sub => sub.problemId);
+
+    // 3. Get problem details (difficulty, tags) for unique solved problems
+    let solvedProblemsDetails = [];
+    if (uniqueSolvedProblemIds.length > 0) {
+         solvedProblemsDetails = await db
+          .select({
+              id: problem.id,
+              difficulty: problem.difficulty,
+              tags: problem.tags // Assuming tags are stored in the problem model
+          })
+          .from(problem)
+          .where(sql`${problem.id} IN ${uniqueSolvedProblemIds}`); // Use SQL for IN clause
+    }
+    
+
+    // 4. Calculate solved problems by difficulty
+    const solvedByDifficulty = {
+      easy: 0,
+      medium: 0,
+      hard: 0,
+    };
+    solvedProblemsDetails.forEach(p => {
+      if (p.difficulty in solvedByDifficulty) {
+        solvedByDifficulty[p.difficulty]++;
+      }
+    });
+
+    // 5. Calculate solved problems by language (based on the language of the latest accepted submission)
+    const solvedByLanguage = {};
+    uniqueSolvedSubmissions.forEach(sub => {
+      const languageName = getLanguageName(sub.languageId); // Assuming getLanguageName exists or define it here
+      solvedByLanguage[languageName] = (solvedByLanguage[languageName] || 0) + 1;
+    });
+
+    // Define getLanguageName if it's not imported
+    function getLanguageName (languageId) {
+        const languageMap = {
+            62:'JAVA',
+            71:'PYTHON',
+            63:'JAVASCRIPT',
+            54:'CPP'
+        }
+        return languageMap[languageId] || 'Unknown';
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User statistics fetched successfully",
+      data: {
+        totalSubmissions,
+        totalSolved: totalSolvedProblems,
+        solvedByDifficulty,
+        solvedByLanguage,
+        // You might also want to return solved problems with details if needed by frontend
+        // solvedProblemsWithDetails: solvedProblemsDetails
+      },
+    });
+
+  } catch (error) {
+    logger.error("get user statistics error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching user statistics",
+      error: error.message,
+    });
+  }
+};
+
+ 
+export const editProfile = async(req ,res)=>{
+  
+
+}
 

@@ -23,6 +23,9 @@ import PlaylistDetails from './pages/user/pages/PlaylistDetails'
 import Profile from './pages/user/pages/Profile'
 import ViewAllSubmission from './pages/user/pages/ViewAllSubmission'
 import ViewAllSolvedProblem from './pages/user/pages/ViewAllSolvedProblem'
+import Meeting from './pages/user/pages/Meeting'
+import InterviewDetails from './pages/user/pages/InterviewDetails'
+
 
 
 const App = () => {
@@ -62,6 +65,9 @@ const App = () => {
               <Route path='/profile/:userId' element={<Profile/>}/>
               
               <Route path='/interview' element={<Interview />} />
+              <Route path='/start-interview/:interviewId' element={<Meeting/>}/>
+              <Route path='/interview-details/:interviewId' element={<InterviewDetails/>}/>
+             
             </Route>
           </Route>
 

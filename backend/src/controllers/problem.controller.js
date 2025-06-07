@@ -69,49 +69,59 @@ export const createProblem = async (req, res) => {
       }
     }
 
-    // Ensure tags and constraints are arrays
+    // Process and validate test cases
+    const processedTestCases = testCases.map((tc, index) => {
+      // Ensure input and output are strings
+      const input = String(tc.input || '').trim();
+      const output = String(tc.output || '').trim();
+      
+      // Validate input and output
+      if (!input || !output) {
+        throw new Error(`Test case ${index + 1} input and output cannot be empty`);
+      }
+
+      return { input, output };
+    });
+
+    // Process other fields
     const processedTags = Array.isArray(tags)
       ? tags
       : typeof tags === "string"
-      ? tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter((t) => t)
+      ? tags.split(",").map((t) => t.trim()).filter((t) => t)
       : [];
 
     const processedConstraints = Array.isArray(constraints)
       ? constraints
       : typeof constraints === "string"
-      ? constraints
-          .split(",")
-          .map((c) => c.trim())
-          .filter((c) => c)
+      ? constraints.split(",").map((c) => c.trim()).filter((c) => c)
       : [];
 
-    // Ensure hints is an array
     const processedHints = Array.isArray(hints)
       ? hints
       : typeof hints === "string"
-        ? hints.split(",").map(h => h.trim()).filter(h => h)
-        : [];
+      ? hints.split(",").map(h => h.trim()).filter(h => h)
+      : [];
 
-    // Process examples to ensure they are arrays
+    // Process examples
     const processedExamples = {};
     if (examples) {
       Object.entries(examples).forEach(([language, langExamples]) => {
         processedExamples[language] = Array.isArray(langExamples) 
-          ? langExamples 
-          : [langExamples];
+          ? langExamples.map(ex => ({
+              input: String(ex.input || '').trim(),
+              output: String(ex.output || '').trim(),
+              explanation: String(ex.explanation || '').trim()
+            }))
+          : [];
       });
     }
 
-    // Process reference solutions to ensure they are strings
+    // Process reference solutions
     const processedReferenceSolutions = {};
     if (reference_solution) {
       Object.entries(reference_solution).forEach(([language, solution]) => {
-        // Store as a single string solution per language
         if (typeof solution === 'string' && solution.trim() !== '') {
-          processedReferenceSolutions[language] = solution;
+          processedReferenceSolutions[language] = solution.trim();
         }
       });
     }
@@ -123,30 +133,65 @@ export const createProblem = async (req, res) => {
           const languageId = getJudge0LanguageId(language);
 
           if (!languageId) {
-            return res
-              .status(400)
-              .json({ message: `Language ${language} not supported..` });
+            return res.status(400).json({ 
+              success: false,
+              message: `Language ${language} not supported..` 
+            });
           }
 
           // Test solution against test cases
-          const submissions = testCases.map(({ input, output }) => ({
-            source_code: solutionCode,
-            language_id: languageId,
-            stdin: input,
-            expected_output: output,
-          }));
+          const submissions = processedTestCases.map(({ input, output }, index) => {
+            console.log(`Creating submission for test case ${index + 1}:`, {
+              language,
+              input,
+              expectedOutput: output
+            });
+            
+            return {
+              source_code: solutionCode,
+              language_id: languageId,
+              stdin: input,
+              expected_output: output
+            };
+          });
 
-          const submissionResults = await submitBatch(submissions);
-          const tokens = submissionResults.map((res) => res.token);
-          const results = await pollbatchResults(tokens);
+          try {
+            const { data: submissionResults, submissionMap } = await submitBatch(submissions);
+            const tokens = submissionResults.map((res) => res.token);
+            const results = await pollbatchResults(tokens, submissionMap);
 
-          for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            if (result.status.id !== 3) {
+            // Check if any test case failed
+            const failedTests = results.filter(result => {
+              const actualOutput = String(result.stdout || '').trim();
+              const expectedOutput = String(result.expected_output || '').trim();
+              
+              console.log('Comparing test case outputs:', {
+                actualOutput,
+                expectedOutput,
+                match: actualOutput === expectedOutput
+              });
+              
+              return actualOutput !== expectedOutput;
+            });
+
+            if (failedTests.length > 0) {
+              const failedTest = failedTests[0];
               return res.status(400).json({
-                error: `TestCase ${i + 1} failed for language ${language}`,
+                success: false,
+                message: `Test case ${failedTest.index + 1} failed for language ${language}`,
+                details: {
+                  expected: failedTest.expected_output,
+                  actual: failedTest.stdout
+                }
               });
             }
+          } catch (error) {
+            console.error('Error testing solution:', error);
+            return res.status(400).json({
+              success: false,
+              message: `Error testing solution for language ${language}`,
+              error: error.message
+            });
           }
         }
       }
@@ -159,7 +204,7 @@ export const createProblem = async (req, res) => {
           description,
           difficulty,
           constraints: processedConstraints,
-          testCases,
+          testCases: processedTestCases,
           tags: processedTags,
           example: processedExamples,
           codeSnippets,

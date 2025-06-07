@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useNavigate } from 'react-router-dom';
 
 const Comment = ({ comment, currentUser, onCommentUpdated, onCommentDeleted }) => {
   const [userDetails, setUserDetails] = useState(null);
@@ -32,6 +33,7 @@ const Comment = ({ comment, currentUser, onCommentUpdated, onCommentDeleted }) =
   const [editedContent, setEditedContent] = useState(comment.content);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   const isAuthor = currentUser && comment.userId === currentUser.id;
 
@@ -127,16 +129,17 @@ const Comment = ({ comment, currentUser, onCommentUpdated, onCommentDeleted }) =
       <div className="flex-1 space-y-1">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-2">
-            <div className="font-semibold">
-              {isLoadingUser ? (
-                <Skeleton className="h-4 w-20" />
-              ) : (
-                <>
-                  {userDetails?.name || 'Unknown User'}
-                  {isAuthor && <span className="text-xs text-muted-foreground ml-1">(You)</span>}
-                </>
-              )}
-            </div>
+            {isLoadingUser ? (
+              <Skeleton className="h-4 w-20" />
+            ) : (
+              <div 
+                className="font-semibold cursor-pointer hover:underline"
+                onClick={() => userDetails?.id && navigate(`/profile/${userDetails.id}`)}
+              >
+                {userDetails?.name || 'Unknown User'}
+                {isAuthor && <span className="text-xs text-muted-foreground ml-1">(You)</span>}
+              </div>
+            )}
             <div className="text-muted-foreground">
               {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) : 'just now'}
             </div>

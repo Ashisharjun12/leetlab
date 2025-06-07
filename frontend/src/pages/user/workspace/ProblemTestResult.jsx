@@ -26,6 +26,7 @@ const ProblemTestResult = ({ runResults, problemTestCases, isLoading }) => {
 
   const testCasesToDisplay = runResults?.detailedResults || problemTestCases || [];
   const selectedCase = testCasesToDisplay[selectedCaseIndex];
+  const executionSummary = runResults?.executionSummary;
 
   if (isLoading && !runResults) {
     return (
@@ -47,27 +48,57 @@ const ProblemTestResult = ({ runResults, problemTestCases, isLoading }) => {
     return <div className="text-muted-foreground p-4">No test cases available.</div>;
   }
 
-  const overallStatus = runResults?.allPassed ? 'Accepted' : (runResults ? 'Wrong Answer' : '');
-  const runtime = runResults?.detailedResults[0]?.time || 'N/A';
-  const passedCount = runResults ? runResults.detailedResults.filter(c => c.passed).length : 0;
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'success':
+        return 'text-green-500';
+      case 'error':
+        return 'text-red-500';
+      case 'wrong_answer':
+        return 'text-yellow-500';
+      default:
+        return 'text-muted-foreground';
+    }
+  };
 
   return (
     <div className="p-4 space-y-4 h-full overflow-y-auto hide-scrollbar">
-      {runResults && (
-        <div className="flex items-center gap-4 mb-4">
-          <div className={`text-lg font-semibold ${runResults.allPassed ? 'text-green-500' : 'text-red-500'}`}>
-            {overallStatus}
+      {runResults && executionSummary && (
+        <div className="space-y-4">
+          <div className={`text-lg font-semibold ${getStatusColor(executionSummary.status)}`}>
+            {executionSummary.message}
           </div>
-          <div className="text-muted-foreground text-sm">Runtime: {runtime}</div>
-          <div className="text-muted-foreground text-sm">Passed: {passedCount} / {testCasesToDisplay.length}</div>
+          
+          {executionSummary.error && (
+            <div className="bg-red-500/10 text-red-500 p-3 rounded-md text-sm font-mono">
+              {executionSummary.error}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div>Runtime: {executionSummary.executionTime}ms</div>
+            <div>Memory: {executionSummary.memoryUsed}KB</div>
+            <div>
+              Passed: {executionSummary.passedTestCases} / {executionSummary.totalTestCases}
+            </div>
+            {executionSummary.failedTestCases > 0 && (
+              <div className="text-red-500">
+                Failed: {executionSummary.failedTestCases}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto">
         {testCasesToDisplay.map((_, index) => (
           <button
             key={index}
-            className={`px-4 py-1 rounded-md text-sm font-medium ${selectedCaseIndex === index ? 'bg-muted text-foreground' : 'bg-muted/50 text-muted-foreground'}`}
+            className={`px-4 py-1 rounded-md text-sm font-medium ${
+              selectedCaseIndex === index 
+                ? 'bg-muted text-foreground' 
+                : 'bg-muted/50 text-muted-foreground'
+            }`}
             onClick={() => setSelectedCaseIndex(index)}
           >
             Case {index + 1}
@@ -80,7 +111,7 @@ const ProblemTestResult = ({ runResults, problemTestCases, isLoading }) => {
           <div>
             <div className="text-sm font-mono text-muted-foreground mb-1">Input</div>
             <div className="bg-muted rounded-md p-3 text-sm font-mono whitespace-pre-wrap">
-              {runResults ? selectedCase.input : selectedCase.input}
+              {selectedCase.input}
             </div>
           </div>
 
@@ -102,16 +133,12 @@ const ProblemTestResult = ({ runResults, problemTestCases, isLoading }) => {
             </div>
           )}
 
-          {runResults && selectedCase.stderr && (
+          {runResults && selectedCase.error && (
             <div>
-              <div className="font-semibold text-red-500 text-sm font-mono mb-1">Stderr:</div>
-              <div className="text-red-500 bg-muted rounded-md p-3 text-sm font-mono whitespace-pre-wrap">{selectedCase.stderr}</div>
-            </div>
-          )}
-          {runResults && selectedCase.compileOut && (
-            <div>
-              <div className="font-semibold text-red-500 text-sm font-mono mb-1">Compile Output:</div>
-              <div className="text-red-500 bg-muted rounded-md p-3 text-sm font-mono whitespace-pre-wrap">{selectedCase.compileOut}</div>
+              <div className="font-semibold text-red-500 text-sm font-mono mb-1">Error:</div>
+              <div className="text-red-500 bg-muted rounded-md p-3 text-sm font-mono whitespace-pre-wrap">
+                {selectedCase.error}
+              </div>
             </div>
           )}
 
@@ -119,6 +146,9 @@ const ProblemTestResult = ({ runResults, problemTestCases, isLoading }) => {
             <div className="flex gap-4 text-sm text-muted-foreground font-mono">
               <div>Time: {selectedCase.time || 'N/A'}</div>
               <div>Memory: {selectedCase.memory || 'N/A'}</div>
+              <div className={`${selectedCase.passed ? 'text-green-500' : 'text-red-500'}`}>
+                {selectedCase.passed ? '✓ Passed' : '✗ Failed'}
+              </div>
             </div>
           )}
         </div>
