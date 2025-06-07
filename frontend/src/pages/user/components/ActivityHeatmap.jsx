@@ -1,69 +1,106 @@
 import React from 'react';
 import { format, getDay } from 'date-fns';
+import { motion } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ActivityHeatmap = ({ displayDays, weeks, streakData }) => {
+  const getColorIntensity = (count) => {
+    if (count === 0) return 'bg-muted/30';
+    if (count >= 5) return 'bg-green-600';
+    if (count >= 3) return 'bg-green-500';
+    if (count >= 1) return 'bg-green-400';
+    return 'bg-muted/30';
+  };
 
   const heatmapColumns = weeks.map((week, weekIndex) => (
-    <div key={weekIndex} className="flex flex-col gap-0.5">
+    <motion.div 
+      key={weekIndex} 
+      className="flex flex-col gap-1"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: weekIndex * 0.05 }}
+    >
       {week.map((day, dayIndex) => {
-        if (!day) return <div key={dayIndex} className="w-3 h-3" />;
+        if (!day) return <div key={dayIndex} className="w-4 h-4" />;
 
         const dateString = day.toDateString();
         const submissionCount = streakData.activeDays.find(
           d => new Date(d.date).toDateString() === dateString
         )?.count || 0;
 
-        let bgColor = 'bg-muted';
-        if (submissionCount > 0) {
-          if (submissionCount >= 5) bgColor = 'bg-green-600';
-          else if (submissionCount >= 3) bgColor = 'bg-green-500';
-          else if (submissionCount >= 1) bgColor = 'bg-green-400';
-        }
-
         return (
-          <div
-            key={dayIndex}
-            className={`w-3 h-3 rounded-sm ${bgColor} hover:scale-125 transition-transform`}
-            title={`${format(day, 'MMM d, yyyy')}: ${submissionCount} submissions`}
-          />
+          <TooltipProvider key={dayIndex}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <motion.div
+                  className={`w-4 h-4 rounded-md ${getColorIntensity(submissionCount)} 
+                    hover:scale-110 transition-all duration-200 cursor-pointer
+                    hover:shadow-md hover:shadow-primary/20`}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                />
+              </TooltipTrigger>
+              <TooltipContent 
+                side="top" 
+                className="bg-background border border-border shadow-lg"
+              >
+                <p className="font-medium">{format(day, 'MMM d, yyyy')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {submissionCount} {submissionCount === 1 ? 'submission' : 'submissions'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       })}
-    </div>
+    </motion.div>
   ));
 
-   // Day labels for rows (Mon, Wed, Fri)
-   const verticalDayLabels = ['Mon', 'Wed', 'Fri'];
-   // Indices for Monday, Wednesday, Friday (0 for Mon, 1 for Tue, ..., 6 for Sun)
-   // We only render labels for Mon (0), Wed (2), Fri (4) in a 0-indexed week starting Monday
-   const labelRowIndices = [0, 2, 4]; // Corresponds to the row index in the 7-row grid
+  const dayLabels = ['Mon', 'Wed', 'Fri'];
+  const labelIndices = [0, 2, 4];
 
-   const dayLabelElements = Array.from({ length: 7 }, (_, index) => {
-       const labelText = labelRowIndices.includes(index) ? verticalDayLabels[labelRowIndices.indexOf(index)] : '';
+  const dayLabelElements = Array.from({ length: 7 }, (_, index) => {
+    const labelText = labelIndices.includes(index) 
+      ? dayLabels[labelIndices.indexOf(index)] 
+      : '';
 
-       return (
-           <div key={index} className="text-xs text-muted-foreground h-3 flex items-center justify-end" style={{ height: '14px' }}> {/* Height should match cell height + gap / 7 rows */}
-               {labelText}
-           </div>
-       );
-   });
-
+    return (
+      <motion.div 
+        key={index} 
+        className="text-xs text-muted-foreground h-4 flex items-center justify-end pr-2"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.1 }}
+      >
+        {labelText}
+      </motion.div>
+    );
+  });
 
   return (
-      <div className="relative flex overflow-hidden">
-          {/* Vertical Day Labels - Fixed width */}
-          {/* The vertical labels container has pr-1 (0.25rem = 4px) and a defined width w-8 (2rem = 32px) */}
-          {/* Total width of vertical label area = 32px + 4px = 36px */}
-          <div className="flex flex-col gap-0.5 pr-1 text-right w-8 flex-shrink-0"> {/* Added flex-shrink-0 */}
-             {dayLabelElements}
-          </div>
-          {/* Heatmap Grid (Horizontal layout) - Wrapped in a scrolling container */}
-          {/* Use flex-grow to take available space and min-w-0 to allow shrinking */}
-          {/* Adjusted padding for alignment. Removed explicit width style to rely on flex-grow */}
-          {/* Ensure it takes full width of the remaining space and scrolls internally */}
-          <div className="flex flex-row items-start gap-0.5 overflow-x-auto hide-scrollbar flex-grow min-w-0 pb-8 pl-6 pr-6"> {/* Removed width style */}
-              {heatmapColumns}
-          </div>
+    <div className="relative flex overflow-hidden bg-card/50 rounded-lg p-4">
+      {/* Vertical Day Labels */}
+      <div className="flex flex-col gap-1 pr-2 w-12 flex-shrink-0">
+        {dayLabelElements}
       </div>
+
+      {/* Heatmap Grid */}
+      <div className="flex flex-row items-start gap-1 overflow-x-auto flex-grow min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {heatmapColumns}
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-0 right-0 flex items-center gap-2 text-xs text-muted-foreground p-2">
+        <span>Less</span>
+        <div className="flex gap-1">
+          <div className="w-3 h-3 rounded-md bg-muted/30" />
+          <div className="w-3 h-3 rounded-md bg-green-400" />
+          <div className="w-3 h-3 rounded-md bg-green-500" />
+          <div className="w-3 h-3 rounded-md bg-green-600" />
+        </div>
+        <span>More</span>
+      </div>
+    </div>
   );
 };
 

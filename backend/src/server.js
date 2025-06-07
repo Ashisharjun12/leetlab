@@ -17,6 +17,7 @@ import uploadRoute from "./routes/upload.route.js"
 import discussionRoute from "./routes/discussion.route.js"
 import editorialRoute from "./routes/editorial.route.js"
 import interviewRoute from "./routes/interview.route.js"
+
 const app = express();
 const PORT = _config.PORT;
 
@@ -46,6 +47,7 @@ app.use('/api/v1/admin',adminRoute)
 app.use('/api/v1/discussion',discussionRoute)
 app.use('/api/v1/editorial',editorialRoute)
 app.use('/api/v1/interview',interviewRoute)
+
 
 // Error handler middleware placeholder
 app.use((err, req, res, next) => {

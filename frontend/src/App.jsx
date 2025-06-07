@@ -25,6 +25,7 @@ import ViewAllSubmission from './pages/user/pages/ViewAllSubmission'
 import ViewAllSolvedProblem from './pages/user/pages/ViewAllSolvedProblem'
 import Meeting from './pages/user/pages/Meeting'
 import InterviewDetails from './pages/user/pages/InterviewDetails'
+import AIChat from './chat/aichat'
 
 
 
@@ -84,6 +85,7 @@ const App = () => {
           </Route>
         </Routes>
       </div>
+      <AIChat />
     </>
   )
 }

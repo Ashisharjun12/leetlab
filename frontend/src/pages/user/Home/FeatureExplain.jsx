@@ -1,6 +1,8 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Code2, Brain, Building2, TestTube2, Mic, MessageSquare } from 'lucide-react'
+import img1 from '@/assets/img1.jpg';
+import img2 from '@/assets/img2.jpg';
 
 const features1 = [
   { 
@@ -106,7 +108,7 @@ const FeatureExplain = () => {
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-primary/20 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
             <div className="relative bg-card rounded-xl shadow-lg overflow-hidden w-full max-w-sm">
               <img 
-                src="/coding-ai-illustration.png" 
+                src={img1}
                 alt="Coding AI" 
                 className="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500" 
               />
@@ -167,7 +169,7 @@ const FeatureExplain = () => {
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-primary/20 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
             <div className="relative bg-card rounded-xl shadow-lg overflow-hidden w-full max-w-sm">
               <img 
-                src="/ai-interview-illustration.png" 
+                src={img2}
                 alt="AI Interview" 
                 className="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500" 
               />

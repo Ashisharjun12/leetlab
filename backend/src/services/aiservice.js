@@ -1,7 +1,7 @@
 import OpenAI from "openai";
+import { _config } from "../config/config.js";
 
-const openRouterApiKey =
-  "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";
+const openRouterApiKey =_config.OPEN_ROUTER_API
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import ProfileActivityStreak from './ProfileActivityStreak';
-import { CheckCircle2, History, ChevronRight } from 'lucide-react';
+import { CheckCircle2, History, ChevronRight, Trophy, Clock } from 'lucide-react';
 import { submissionAPI, problemAPI, companyAPI } from '@/api/api';
 import { toast } from 'sonner';
 import ProfileSolvedProblemsTable from './ProfileSolvedProblemsTable';
 import ProfileRecentSubmissionsTable from './ProfileRecentSubmissionsTable';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const ProfileRightSection = ({ userId }) => {
   const [solvedProblems, setSolvedProblems] = useState([]);
@@ -99,54 +100,87 @@ const ProfileRightSection = ({ userId }) => {
   }, [userId]);
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Activity Streak Section */}
       <ProfileActivityStreak userId={userId} />
 
       {/* Solved Problems Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-1">
-             <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-             Solved Problems
-          </CardTitle>
-          <Link to={`/view-all-solved-problem/${userId}`} className="text-sm text-muted-foreground hover:underline flex items-center">
-            View All Solved Problems <ChevronRight className="w-4 h-4 ml-1" />
-          </Link>
-        </CardHeader>
-        <CardContent>
-           {isLoadingSolved ? (
-             <ProfileSolvedProblemsTable problems={[]} isLoading={isLoadingSolved} userId={userId} />
-           ) : solvedProblems.length > 0 ? (
-             <ProfileSolvedProblemsTable problems={solvedProblems} isLoading={isLoadingSolved} userId={userId} />
-           ) : (
-             <div className="text-muted-foreground">No solved problems yet.</div>
-           )}
-        </CardContent>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-6">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              Solved Problems
+            </CardTitle>
+            <Link 
+              to={`/view-all-solved-problem/${userId}`} 
+              className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 group"
+            >
+              View All 
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </CardHeader>
+          <CardContent className="px-6">
+            {isLoadingSolved ? (
+              <ProfileSolvedProblemsTable problems={[]} isLoading={isLoadingSolved} userId={userId} />
+            ) : solvedProblems.length > 0 ? (
+              <ProfileSolvedProblemsTable problems={solvedProblems} isLoading={isLoadingSolved} userId={userId} />
+            ) : (
+              <div className="text-muted-foreground text-center py-8">
+                <Trophy className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                <p>No solved problems yet.</p>
+                <p className="text-sm">Start solving problems to see them here!</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Recent Submissions Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-1">
-             <History className="w-4 h-4 text-muted-foreground" />
-             Recent Submissions
-          </CardTitle>
-          <Link to={`/view-all-submission/${userId}`} className="text-sm text-muted-foreground hover:underline flex items-center">
-            View All Submissions <ChevronRight className="w-4 h-4 ml-1" />
-          </Link>
-        </CardHeader>
-        <CardContent>
-           {isLoadingRecent ? (
-             <ProfileRecentSubmissionsTable submissions={[]} isLoading={isLoadingRecent} />
-           ) : recentSubmissions.length > 0 ? (
-             <ProfileRecentSubmissionsTable submissions={recentSubmissions} isLoading={isLoadingRecent} />
-           ) : (
-             <div className="text-muted-foreground">No recent submissions yet.</div>
-           )}
-        </CardContent>
-      </Card>
-    </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-6">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-500" />
+              Recent Submissions
+            </CardTitle>
+            <Link 
+              to={`/view-all-submission/${userId}`} 
+              className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 group"
+            >
+              View All 
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </CardHeader>
+          <CardContent className="px-6">
+            {isLoadingRecent ? (
+              <ProfileRecentSubmissionsTable submissions={[]} isLoading={isLoadingRecent} />
+            ) : recentSubmissions.length > 0 ? (
+              <ProfileRecentSubmissionsTable submissions={recentSubmissions} isLoading={isLoadingRecent} />
+            ) : (
+              <div className="text-muted-foreground text-center py-8">
+                <History className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                <p>No recent submissions yet.</p>
+                <p className="text-sm">Submit your first solution to see it here!</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 };
 

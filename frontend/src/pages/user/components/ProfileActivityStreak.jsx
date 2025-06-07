@@ -5,22 +5,21 @@ import { submissionAPI } from '@/api/api';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO, startOfYear, endOfYear, eachDayOfInterval, getDay, addDays, startOfWeek, isSameDay, getWeek, getWeeksInMonth, isBefore, isAfter, subYears, endOfWeek, startOfMonth, addMonths, getMonth, getYear, endOfMonth } from 'date-fns';
-import ActivityHeatmap from './ActivityHeatmap'; // Import the new component
+import ActivityHeatmap from './ActivityHeatmap';
+import { motion } from 'framer-motion';
 
 const ProfileActivityStreak = ({ userId }) => {
    const [streakData, setStreakData] = useState(null);
    const [isLoading, setIsLoading] = useState(true);
-   const [selectedRange, setSelectedRange] = useState(String(new Date().getFullYear())); // Default to current year as string
+   const [selectedRange, setSelectedRange] = useState(String(new Date().getFullYear()));
    const [availableYears, setAvailableYears] = useState([]);
    const [totalSubmissions, setTotalSubmissions] = useState(0);
 
    useEffect(() => {
      const currentYear = new Date().getFullYear();
-     // Generate last 5 years including current year
      const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
-     setAvailableYears(years.map(String)); // Set available years as strings
-      // Set default selected range to the current year as a string after available years are set
-      setSelectedRange(String(currentYear));
+     setAvailableYears(years.map(String));
+     setSelectedRange(String(currentYear));
    }, []);
 
    useEffect(() => {
@@ -28,7 +27,7 @@ const ProfileActivityStreak = ({ userId }) => {
        if (!userId) return;
        setIsLoading(true);
        try {
-         const year = selectedRange === String(new Date().getFullYear()) ? null : selectedRange; // Pass null for current year to API
+         const year = selectedRange === String(new Date().getFullYear()) ? null : selectedRange;
          const response = await submissionAPI.getActivityStreakByUserId(userId, year);
          setStreakData(response.data.data);
          setTotalSubmissions(response.data.data.totalSubmissions || 0);
@@ -45,32 +44,6 @@ const ProfileActivityStreak = ({ userId }) => {
      fetchStreakData();
    }, [userId, selectedRange]);
 
-   // Helper to determine cell color based on activity count (using Tailwind classes)
-   const getActivityColor = (count) => {
-     if (count === 0) return 'bg-gray-800'; // No activity (default empty cell color)
-     if (count > 0 && count < 3) return 'bg-green-700'; // Low activity (1-2 submissions)
-     if (count >= 3 && count < 6) return 'bg-green-600'; // Medium activity (3-5 submissions)
-     if (count >= 6 && count < 10) return 'bg-green-500'; // High activity (6-9 submissions)
-     if (count >= 10) return 'bg-green-400'; // Very high activity (10+ submissions)
-     return 'bg-gray-800'; // Default for 0 or unexpected
-   };
-
-   const getMonthLabels = (startDate, endDate) => {
-     const months = [];
-     let currentDate = startOfMonth(startDate);
-     
-     while (currentDate <= endDate) {
-       months.push({
-         month: format(currentDate, 'MMM'),
-         date: new Date(currentDate)
-       });
-       currentDate = addMonths(currentDate, 1);
-     }
-     
-     return months;
-   };
-
-   // Prepare data for the heatmap component
    const renderHeatmapData = () => {
        if (!streakData) return { displayDays: [], weeks: [] };
 
@@ -78,19 +51,15 @@ const ProfileActivityStreak = ({ userId }) => {
        const today = new Date();
 
        if (selectedRange === String(today.getFullYear())) {
-         // For the current year, display the last 12 months ending around today, aligned to weeks
-         displayEndDate = endOfWeek(today, { weekStartsOn: 1 }); // End on the upcoming Sunday
-         displayStartDate = startOfWeek(subYears(displayEndDate, 1), { weekStartsOn: 1 }); // Start on the Monday of the week a year before end date
+         displayEndDate = endOfWeek(today, { weekStartsOn: 1 });
+         displayStartDate = startOfWeek(subYears(displayEndDate, 1), { weekStartsOn: 1 });
        } else {
-         // For a specific year, display the entire year, aligned to weeks
          const year = parseInt(selectedRange, 10);
-         displayStartDate = startOfWeek(startOfYear(new Date(year, 0, 1)), { weekStartsOn: 1 }); // Start on the Monday of the week containing Jan 1st
-         displayEndDate = endOfWeek(endOfYear(new Date(year, 0, 1)), { weekStartsOn: 1 }); // End on the Sunday of the week containing Dec 31st
+         displayStartDate = startOfWeek(startOfYear(new Date(year, 0, 1)), { weekStartsOn: 1 });
+         displayEndDate = endOfWeek(endOfYear(new Date(year, 0, 1)), { weekStartsOn: 1 });
        }
 
        const displayDays = eachDayOfInterval({ start: displayStartDate, end: displayEndDate });
-
-       // Group days by week (horizontal columns)
        const weeks = [];
        let currentWeek = [];
        displayDays.forEach((day, index) => {
@@ -101,11 +70,10 @@ const ProfileActivityStreak = ({ userId }) => {
            }
        });
        if (currentWeek.length > 0) {
-           // Pad the last week if necessary to have 7 days (for consistent column layout)
            while(currentWeek.length < 7) {
                currentWeek.push(null);
            }
-            weeks.push(currentWeek);
+           weeks.push(currentWeek);
        }
 
        return { displayDays, weeks };
@@ -115,21 +83,23 @@ const ProfileActivityStreak = ({ userId }) => {
 
    if (isLoading) {
      return (
-       <Card>
+       <Card className="bg-card/50 backdrop-blur-sm">
          <CardHeader>
            <CardTitle className="text-sm font-medium">Activity Streak</CardTitle>
          </CardHeader>
          <CardContent>
-           <div>Loading activity streak...</div>
+           <div className="animate-pulse space-y-4">
+             <div className="h-8 bg-muted/30 rounded-lg w-1/3"></div>
+             <div className="h-40 bg-muted/30 rounded-lg"></div>
+           </div>
          </CardContent>
        </Card>
      );
    }
 
-   // Handle case where streakData is null or empty after loading
    if (!streakData) {
       return (
-        <Card>
+        <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Activity Streak</CardTitle>
           </CardHeader>
@@ -141,68 +111,72 @@ const ProfileActivityStreak = ({ userId }) => {
    }
 
    return (
-     <Card>
-       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-6"> {/* Added px-6 for padding */}
-         {/* Flame icon and Activity Streak title */}
-         <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-orange-500" /> {/* Orange fire icon */}
+     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-6">
+         <motion.div 
+           className="flex items-center gap-2"
+           initial={{ opacity: 0, x: -20 }}
+           animate={{ opacity: 1, x: 0 }}
+           transition={{ duration: 0.5 }}
+         >
+            <Flame className="w-5 h-5 text-orange-500 animate-pulse" />
             <CardTitle className="text-sm font-medium">Activity Streak</CardTitle>
-         </div>
+         </motion.div>
 
-          {/* Streak numbers and Year/Range Selection */}
-          <div className="flex items-center gap-4"> {/* Flex container for streak numbers and select */}
-            {/* Total active days and Max streak */}
-             <div className="flex items-center text-sm text-muted-foreground gap-4"> {/* Flex for streak numbers */}
-               <span>Total active days: <span className="font-semibold text-foreground">{streakData.totalActiveDays}</span></span>
-               <span>Max streak: <span className="font-semibold text-foreground">{streakData.longestStreak}</span></span>
-               {/* Removed Current Streak here as per new image */} 
-             </div>
-              {/* Year/Range Selection - Using Select for now, could be a custom range selector */}
-            <Select onValueChange={(value) => setSelectedRange(value)} value={selectedRange}>
-              <SelectTrigger className="w-[100px] h-8">
-                <SelectValue placeholder="Select Range" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Removed the separate 'current' SelectItem to avoid duplicates */}
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>
-                    {year === String(new Date().getFullYear()) ? 'Current' : year} {/* Display 'Current' for the current year */} 
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+         <div className="flex items-center gap-4">
+           <motion.div 
+             className="flex items-center text-sm text-muted-foreground gap-4"
+             initial={{ opacity: 0, y: -20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.5, delay: 0.1 }}
+           >
+             <span>Total active days: <span className="font-semibold text-foreground">{streakData.totalActiveDays}</span></span>
+             <span>Max streak: <span className="font-semibold text-foreground">{streakData.longestStreak}</span></span>
+           </motion.div>
+           <Select onValueChange={(value) => setSelectedRange(value)} value={selectedRange}>
+             <SelectTrigger className="w-[100px] h-8 bg-background/50">
+               <SelectValue placeholder="Select Range" />
+             </SelectTrigger>
+             <SelectContent>
+               {availableYears.map(year => (
+                 <SelectItem key={year} value={year}>
+                   {year === String(new Date().getFullYear()) ? 'Current' : year}
+                 </SelectItem>
+               ))}
+             </SelectContent>
+           </Select>
+         </div>
        </CardHeader>
-       <CardContent className="px-6 pb-6"> {/* Added px-6 and pb-6 for padding */}
-         <div className="space-y-4">
-           <div className="flex justify-between">
-             <div>
-               <p className="text-lg font-bold text-yellow-600">{streakData?.currentStreak || 0}</p>
+       <CardContent className="px-6 pb-6">
+         <div className="space-y-6">
+           <motion.div 
+             className="grid grid-cols-3 gap-4"
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.5, delay: 0.2 }}
+           >
+             <div className="bg-background/50 rounded-lg p-4 text-center">
+               <p className="text-2xl font-bold text-orange-500">{streakData?.currentStreak || 0}</p>
                <p className="text-sm text-muted-foreground">Current Streak</p>
              </div>
-             <div>
-               <p className="text-lg font-bold text-yellow-600">{streakData?.longestStreak || 0}</p>
+             <div className="bg-background/50 rounded-lg p-4 text-center">
+               <p className="text-2xl font-bold text-orange-500">{streakData?.longestStreak || 0}</p>
                <p className="text-sm text-muted-foreground">Longest Streak</p>
              </div>
-             <div>
-               <p className="text-lg font-bold text-yellow-600">{streakData?.totalActiveDays || 0}</p>
+             <div className="bg-background/50 rounded-lg p-4 text-center">
+               <p className="text-2xl font-bold text-orange-500">{streakData?.totalActiveDays || 0}</p>
                <p className="text-sm text-muted-foreground">Total Active Days</p>
              </div>
-           </div>
-           {/* Container for the Activity Heatmap - Ensure it constrains width and handles overflow */}
-           {/* Added w-full and overflow-hidden to make this div take full width and clip content */}
-           <div className="relative w-full overflow-hidden"> 
-             {/* Render the separate ActivityHeatmap component */}
+           </motion.div>
+
+           <motion.div 
+             className="relative w-full overflow-hidden"
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.5, delay: 0.3 }}
+           >
              <ActivityHeatmap displayDays={displayDays} weeks={weeks} streakData={streakData} />
-           </div>
-         </div>
-         {/* Legend */}
-         <div className="flex justify-end items-center text-xs text-muted-foreground mt-2">
-            Less <span className="w-3 h-3 rounded-sm bg-gray-800 mx-1"></span>
-            <span className="w-3 h-3 rounded-sm bg-green-700 mx-0.5"></span>
-            <span className="w-3 h-3 rounded-sm bg-green-600 mx-0.5"></span>
-            <span className="w-3 h-3 rounded-sm bg-green-500 mx-0.5"></span>
-            <span className="w-3 h-3 rounded-sm bg-green-400 ml-0.5 mr-1"></span> More
+           </motion.div>
          </div>
        </CardContent>
      </Card>

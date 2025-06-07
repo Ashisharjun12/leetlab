@@ -24,7 +24,7 @@ const Meeting = () => {
     useEffect(() => {
         const initVapi = async () => {
             try {
-                const vapiInstance = new Vapi('31d956c9-9a86-45ad-8e9d-edb423d404d9');
+                const vapiInstance = new Vapi(import.meta.env.VITE_VAPI_API);
                 setVapi(vapiInstance);
 
                 vapiInstance.on('call-start', () => {
